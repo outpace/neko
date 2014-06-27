@@ -18,9 +18,9 @@
 
     (require '[neko.log :as log])
 
-    (neko.log/d \"Some log string\" {:foo 1, :bar 2})
-    (neko.log/i \"Logging to custom tag\" [1 2 3] :tag \"custom\")
-    (neko.log/e \"Something went wrong\" [1 2 3] :exception ex)"
+    (log/d \"Some log string\" {:foo 1, :bar 2})
+    (log/i \"Logging to custom tag\" [1 2 3] :tag \"custom\")
+    (log/e \"Something went wrong\" [1 2 3] :exception ex)"
   {:author "Adam Clements"}
   (:import android.util.Log))
 
