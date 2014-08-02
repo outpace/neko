@@ -23,7 +23,7 @@
   enable-dynamic-compilation
   [context classes-dir]
   (when (or (not (::release-build *compiler-options*))
-            (::start-nrepl-sever *compiler-options*)
+            (::start-nrepl-server *compiler-options*)
             (::enable-dynamic-compilation *compiler-options*))
     `(neko.compilation/init ~context ~classes-dir)))
 
@@ -67,7 +67,7 @@
   start-nrepl-server
   [port other-args]
   (when (or (not (::release-build *compiler-options*))
-            (::start-nrepl-sever *compiler-options*))
+            (::start-nrepl-server *compiler-options*))
     (let [build-port (::nrepl-port *compiler-options*)
           mware (list `quote (::nrepl-middleware *compiler-options*))]
       `(let [port# (or ~port ~build-port 9999)]
