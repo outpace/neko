@@ -11,7 +11,8 @@
 
 (ns neko.init
   "Contains functions for neko initialization and setting runtime options."
-  (:require [neko context log resource compilation threading])
+  (:require [neko context resource compilation threading]
+            [neko.tools.repl :refer [start-nrepl-server]])
   (:import android.content.Context
            java.util.concurrent.atomic.AtomicLong
            java.util.concurrent.ThreadFactory))
@@ -26,53 +27,6 @@
             (::start-nrepl-server *compiler-options*)
             (::enable-dynamic-compilation *compiler-options*))
     `(neko.compilation/init ~context ~classes-dir)))
-
-(defn android-thread-factory
-  "Returns a new ThreadFactory with increased stack size. It is used
-  to substitute nREPL's native `configure-thread-factory` on Android
-  platform."
-  []
-  (let [counter (AtomicLong. 0)]
-    (reify ThreadFactory
-      (newThread [_ runnable]
-        (doto (Thread. (.getThreadGroup (Thread/currentThread))
-                       runnable
-                       (format "nREPL-worker-%s" (.getAndIncrement counter))
-                       1048576) ;; Hardcoded stack size of 1Mb
-          (.setDaemon true))))))
-
-(defn start-repl
-  "Starts a remote nREPL server. Creates a `user` namespace because
-  nREPL expects it to be there while initializing. References nrepl's
-  `start-server` function on demand because the project can be
-  compiled without nrepl dependency."
-  [middleware & repl-args]
-  (binding [*ns* (create-ns 'user)]
-    (refer-clojure)
-    (use 'clojure.tools.nrepl.server)
-    (require '[clojure.tools.nrepl.middleware.interruptible-eval :as ie])
-    (with-redefs-fn {(resolve 'ie/configure-thread-factory)
-                     android-thread-factory}
-      #(apply (resolve 'start-server)
-              :handler (apply (resolve 'default-handler)
-                              (map (fn [sym]
-                                     (require (symbol (namespace sym)))
-                                     (resolve sym))
-                                   middleware))
-              repl-args))))
-
-(defmacro
-  ^{:private true
-    :doc "Expands into nREPL server initialization if conditions are met."}
-  start-nrepl-server
-  [port other-args]
-  (when (or (not (::release-build *compiler-options*))
-            (::start-nrepl-server *compiler-options*))
-    (let [build-port (::nrepl-port *compiler-options*)
-          mware (list `quote (::nrepl-middleware *compiler-options*))]
-      `(let [port# (or ~port ~build-port 9999)]
-         (apply start-repl ~mware :port port# ~other-args)
-         (neko.log/i "Nrepl started at port" port#)))))
 
 (defn enable-compliment-sources
   "Initializes compliment sources if theirs namespaces are present."
