@@ -7,5 +7,8 @@
   :source-paths ["src" "src/clojure"]
   :java-source-paths ["src/java" "gen"]
 
+  :profiles {:default [:user :dev :android-common]}
+  :plugins [[lein-droid "0.3.0-beta1"]]
+
   :android {:library true
             :target-sdk :ics})
