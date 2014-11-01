@@ -1,14 +1,3 @@
-; Copyright © 2012-2013 Alexander Yakushev.
-; All rights reserved.
-;
-; This program and the accompanying materials are made available under the
-; terms of the Eclipse Public License v1.0 which accompanies this distribution,
-; and is available at <http://www.eclipse.org/legal/epl-v10.html>.
-;
-; By using this software in any fashion, you are agreeing to be bound by the
-; terms of this license.  You must not remove this notice, or any other, from
-; this software.
-
 (ns neko.ui
   "Tools for defining and manipulating Android UI elements."
   (:use [neko.-utils :only [keyword->setter reflect-setter reflect-constructor]]
