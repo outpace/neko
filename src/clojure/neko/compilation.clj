@@ -44,15 +44,13 @@
 (defn clear-cache
   "Clears all DEX and JAR files from the cache directory."
   []
-  (locking cache-dir
-    (let [^File dir @cache-dir
-          delete-file (fn [^String name] (.delete (File. dir name)))]
-      (when dir
-        (->>
-          (.list dir)
-          (filter cache-file?)
-          (map delete-file)
-          (dorun))))))
+  (let [^File dir @cache-dir
+        delete-file (fn [^String name] (.delete (File. dir name)))]
+    (when dir
+      (->> (.list dir)
+           (filter cache-file?)
+           (map delete-file)
+           (dorun)))))
 
 (defn get-data-readers [^Context context]
   (when-let [readers-file (try (.open (.getAssets context) "data_readers.clj")
@@ -67,7 +65,6 @@
   "Initializes the compilation path, creating or cleaning cache directory as
   necessary."
   ([^Context context dir-name]
-   (locking cache-dir
      (when-not @cache-dir
        (let [dir  (.getDir context dir-name Context/MODE_PRIVATE)
              path (.getAbsolutePath dir)]
@@ -75,6 +72,6 @@
          (System/setProperty "clojure.compile.path" path)
          (alter-var-root #'clojure.core/*data-readers*
                          (constantly (get-data-readers context)))
-         (alter-var-root #'clojure.core/*compile-path* (constantly path))))))
+         (alter-var-root #'clojure.core/*compile-path* (constantly path)))))
   ([context]
-   (init context default-cache-dir)))
+     (init context default-cache-dir)))
