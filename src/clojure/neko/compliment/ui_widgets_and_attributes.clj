@@ -73,7 +73,7 @@
             (attributes kw)
             (->> (attributes kw)
                  (map doc/get-trait-doc)
-                 (interpose "\n")
+                 (interpose "\n\n")
                  string/join)))))
 
 ;; ## Source definition
