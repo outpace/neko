@@ -2,20 +2,15 @@
   "Contains functions for neko initialization and setting runtime options."
   (:require [neko context resource compilation threading]
             [neko.tools.repl :refer [start-nrepl-server]])
-  (:import android.content.Context
-           java.util.concurrent.atomic.AtomicLong
-           java.util.concurrent.ThreadFactory))
+  (:import android.content.Context))
 
-(defmacro
-  ^{:private true
-    :doc "Expands into dynamic compilation initialization if
-    conditions are met."}
-  enable-dynamic-compilation
-  [context classes-dir]
+(defmacro ^:private enable-dynamic-compilation
+  "Expands into dynamic compilation initialization if conditions are met."
+  [context]
   (when (or (not (::release-build *compiler-options*))
             (::start-nrepl-server *compiler-options*)
             (::enable-dynamic-compilation *compiler-options*))
-    `(neko.compilation/init ~context ~classes-dir)))
+    `(neko.compilation/init ~context)))
 
 (defn enable-compliment-sources
   "Initializes compliment sources if theirs namespaces are present."
@@ -38,15 +33,14 @@
   key-value fashion. The value of `:classes-dir` specifies the path
   where neko should store compiled files. Other optional arguments are
   directly feeded to the nREPL's `start-server` function. "
-  [context & {:keys [classes-dir port] :or {classes-dir "classes"}
-              :as args}]
+  [context & {:keys [port] :as args}]
   (when-not @initialized?
     (alter-var-root #'neko.context/context (constantly context))
     (alter-var-root #'neko.resource/package-name
                     (constantly (.getPackageName ^Context context)))
-    (enable-dynamic-compilation context classes-dir)
+    (enable-dynamic-compilation context)
     ;; Ensure that `:port` is provided, pass all other arguments as-is.
-    (start-nrepl-server port (mapcat identity (dissoc args :classes-dir :port)))
+    (start-nrepl-server port (mapcat identity (dissoc args :port)))
     (neko.threading/init-threading)
     (enable-compliment-sources)
     (reset! initialized? true)))
