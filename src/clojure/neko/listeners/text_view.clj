@@ -12,7 +12,8 @@
 (ns neko.listeners.text-view
   "Uility functions and macros for creating listeners corresponding to the
   android.widget.TextView class."
-  {:author "Daniel Solano Gómez"})
+  {:author "Daniel Solano Gómez"}
+  (:require [neko.debug :refer [safe-for-ui]]))
 
 (defn on-editor-action-call
   "Takes a function and yields a TextView.OnEditorActionListener object that
@@ -33,7 +34,7 @@
    :post [(instance? android.widget.TextView$OnEditorActionListener %)]}
   (reify android.widget.TextView$OnEditorActionListener
     (onEditorAction [this view action-id key-event]
-      (boolean (handler-fn view action-id key-event)))))
+      (safe-for-ui (boolean (handler-fn view action-id key-event))))))
 
 (defmacro on-editor-action
   "Takes a body of expressions and yields a TextView.OnEditorActionListener

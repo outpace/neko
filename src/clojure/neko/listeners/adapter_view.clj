@@ -12,7 +12,8 @@
 (ns neko.listeners.adapter-view
   "Utility functions and macros for creating listeners corresponding to the
   android.widget.AdapterView class."
-  {:author "Daniel Solano Gómez"})
+  {:author "Daniel Solano Gómez"}
+  (:require [neko.debug :refer [safe-for-ui]]))
 
 (defn on-item-click-call
   "Takes a function and yields an AdapterView.OnItemClickListener object that
@@ -28,7 +29,7 @@
    :post [(instance? android.widget.AdapterView$OnItemClickListener %)]}
   (reify android.widget.AdapterView$OnItemClickListener
     (onItemClick [this parent view position id]
-      (handler-fn parent view position id))))
+      (safe-for-ui (handler-fn parent view position id)))))
 
 (defmacro on-item-click
   "Takes a body of expressions and yields an AdapterView.OnItemClickListener
@@ -59,7 +60,7 @@
    :post [(instance? android.widget.AdapterView$OnItemLongClickListener %)]}
   (reify android.widget.AdapterView$OnItemLongClickListener
     (onItemLongClick [this parent view position id]
-      (boolean (handler-fn parent view position id)))))
+      (safe-for-ui (boolean (handler-fn parent view position id))))))
 
 (defmacro on-item-long-click
   "Takes a body of expressions and yields an
@@ -100,10 +101,10 @@
     :post [(instance? android.widget.AdapterView$OnItemSelectedListener %)]}
    (reify android.widget.AdapterView$OnItemSelectedListener
      (onItemSelected [this parent view position id]
-       (item-fn parent view position id))
+       (safe-for-ui (item-fn parent view position id)))
      (onNothingSelected [this parent]
-       (when nothing-fn
-         (nothing-fn parent))))))
+       (safe-for-ui (when nothing-fn
+                      (nothing-fn parent)))))))
 
 (defmacro on-item-selected
   "Takes a body of expressions and yields an AdapterView.OnItemSelectedListener

@@ -10,6 +10,6 @@
   [change-fn submit-fn]
   (reify android.widget.SearchView$OnQueryTextListener
     (onQueryTextChange [this query]
-      (call-if-nnil change-fn query))
+      (safe-for-ui (call-if-nnil change-fn query)))
     (onQueryTextSubmit [this query]
-      (call-if-nnil submit-fn query))))
+      (safe-for-ui (call-if-nnil submit-fn query)))))
