@@ -68,10 +68,10 @@
 (defmacro start-nrepl-server
   "Expands into nREPL server initialization if conditions are met."
   [port other-args]
-  (when (or (not (::release-build *compiler-options*))
-            (::start-nrepl-server *compiler-options*))
-    (let [build-port (::nrepl-port *compiler-options*)
-          mware (list `quote (or (::nrepl-middleware *compiler-options*)
+  (when (or (not (:neko.init/release-build *compiler-options*))
+            (:neko.init/start-nrepl-server *compiler-options*))
+    (let [build-port (:neko.init/nrepl-port *compiler-options*)
+          mware (list `quote (or (:neko.init/nrepl-middleware *compiler-options*)
                                  cider-middleware))]
       `(let [port# (or ~port ~build-port 9999)]
          (apply start-repl ~mware :port port# ~other-args)
