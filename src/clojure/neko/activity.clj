@@ -43,7 +43,7 @@
   (and (bound? #'*activity*)
        (activity? *activity*)))
 
-(defn get-decor-view
+(defn ^View get-decor-view
   "Returns the root view of the given activity."
   [^Activity activity]
   (.. activity getWindow getDecorView))
@@ -67,8 +67,8 @@
        (let [dv (get-decor-view activity)]
          (.setTag dv (java.util.HashMap.))
          (.setContentView activity
-                          (neko.ui/make-ui-element activity view
-                                                   {:id-holder dv}))))))
+                          ^View (neko.ui/make-ui-element activity view
+                                                         {:id-holder dv}))))))
 
 (defn request-window-features!
   "Requests the given features for the activity.  The features should be
@@ -182,7 +182,9 @@ Use (*a) to get the current activity."))
              ~(when (and (not (:neko.init/release-build *compiler-options*))
                          def)
                 `(def ~(vary-meta def assoc :tag name) ~'this))
-             (.put all-activities ~(or key *ns*) ~'this)
+             (.put all-activities ~*ns* ~'this)
+             ~(when key
+                `(.put all-activities ~key ~'this))
              (neko.init/init (.getApplicationContext ~'this))
              (~on-create ~'this ~'savedInstanceState)))
        ~(when on-create-options-menu
