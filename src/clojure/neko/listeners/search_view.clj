@@ -1,4 +1,5 @@
 (ns neko.listeners.search-view
+  (:require [neko.debug :refer [safe-for-ui]])
   (:use [neko.-utils :only [call-if-nnil]])
   (:import android.widget.SearchView))
 
