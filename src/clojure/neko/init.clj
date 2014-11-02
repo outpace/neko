@@ -28,11 +28,9 @@
 (defn init
   "Initializes neko library.
 
-  Initializes compilation facilities and runs nREPL server if
-  appropriate. Takes the application context and optional arguments in
-  key-value fashion. The value of `:classes-dir` specifies the path
-  where neko should store compiled files. Other optional arguments are
-  directly feeded to the nREPL's `start-server` function. "
+  Initializes compilation facilities and runs nREPL server if appropriate. Takes
+  the application context and optional arguments in key-value fashion. Optional
+  arguments are feeded to the nREPL's `start-server` function."
   [context & {:keys [port] :as args}]
   (when-not @initialized?
     (alter-var-root #'neko.context/context (constantly context))

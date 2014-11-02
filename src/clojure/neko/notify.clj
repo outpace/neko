@@ -13,13 +13,19 @@
                 :long Toast/LENGTH_LONG})
 
 (defn toast
-  "Creates a Toast object using a text message and a keyword
-  representing how long a toast should be visible (`:short` or
-  `:long`). The application context will be used. One-argument version
+  "Creates a Toast object using a text message and a keyword representing how
+  long a toast should be visible (`:short` or `:long`). Two-argument version
   takes only message and assumes length to be :long."
+  {:forms '([context message] [context message length])}
   ([message]
-     (toast message :long))
-  ([^String message, length]
+     (println "One-argument version is deprecated. Please use (toast context message)")
+     (toast context message :long))
+  ([arg1 arg2]
+     (if (instance? Context arg1)
+       (toast arg1 arg2 :long)
+       (do (println "Context-less version is deprecated. Please use (toast context message length)")
+           (toast context arg1 arg2))))
+  ([^Context context, ^String message, length]
      {:pre [(contains? toast-length length)]}
      (.show
       ^Toast (Toast/makeText context message ^int (toast-length length)))))
@@ -33,29 +39,32 @@
 
 (defn- ^NotificationManager notification-manager
   "Returns the notification manager instance."
-  []
+  [^Context context]
   (.getSystemService context Context/NOTIFICATION_SERVICE))
 
 (defn construct-pending-intent
   "Creates a PendingIntent instance from a vector where the first
   element is a keyword representing the action type, and the second
   element is a action string to create an Intent from."
-  [[action-type, ^String action]]
-  (let [^Intent intent (Intent. action)]
-    (case action-type
-      :activity (PendingIntent/getActivity context 0 intent 0)
-      :broadcast (PendingIntent/getBroadcast context 0 intent 0)
-      :service (PendingIntent/getService context 0 intent 0))))
+  ([context [action-type, ^String action]]
+     (let [^Intent intent (Intent. action)]
+       (case action-type
+         :activity (PendingIntent/getActivity context 0 intent 0)
+         :broadcast (PendingIntent/getBroadcast context 0 intent 0)
+         :service (PendingIntent/getService context 0 intent 0)))))
 
 (defn notification
   "Creates a Notification instance. If icon is not provided uses the
   default notification icon."
-  [& {:keys [icon ticker-text when content-title content-text action]
-      :or {icon @default-notification-icon, when (System/currentTimeMillis)}}]
-  {:pre [icon]}
-  (let [notification (Notification. icon ticker-text when)]
+  [& args]
+  (let [[context {:keys [icon ticker-text when content-title content-text action]
+                  :or {icon @default-notification-icon, when (System/currentTimeMillis)}}]
+        (if (instance? Context (first args))
+          [(first args) (apply hash-map (rest args))]
+          [context (apply hash-map args)])
+        notification (Notification. icon ticker-text when)]
     (.setLatestEventInfo notification context content-title content-text
-                         (construct-pending-intent action))
+                         (construct-pending-intent context action))
     notification))
 
 ;; This atom stores the mapping of keywords to integer IDs that
@@ -74,9 +83,16 @@
 (defn fire
   "Sends the notification to the status bar. ID is optional and could be
   either an integer or a keyword."
+  {:forms '([context notification] [context id notification])}
   ([notification]
-     (.notify (notification-manager) (new-id) notification))
-  ([id notification]
+     (println "One-argument version is deprecated. Please use (fire context notification)")
+     (.notify (notification-manager context) (new-id) notification))
+  ([arg1 arg2]
+     (if (instance? Context arg1)
+       (.notify (notification-manager arg1) (new-id) arg2)
+       (do (println "Context-less version is deprecated. Please use (fire context id notification)")
+           (fire context arg1 arg2))))
+  ([context id notification]
      (let [id (if (keyword? id)
                 (if (contains? @notification-ids id)
                   (@notification-ids id)
@@ -84,12 +100,16 @@
                     (swap! notification-ids assoc id number-id)
                     number-id))
                 id)]
-       (.notify (notification-manager) id notification))))
+       (.notify (notification-manager context) id notification))))
 
 (defn cancel
   "Removes a notification by the given ID from the status bar."
-  [id]
-  (let [id (if (keyword? id)
-             (@notification-ids id)
-             id)]
-    (.cancel (notification-manager) id)))
+  {:forms '([context id])}
+  ([id]
+     (println "One-argument version is deprecated. Please use (cancel context id)")
+     (cancel context id))
+  ([context id]
+     (let [id (if (keyword? id)
+                (@notification-ids id)
+                id)]
+       (.cancel (notification-manager context) id))))

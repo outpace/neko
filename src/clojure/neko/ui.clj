@@ -82,20 +82,17 @@
     tree))
 
 (defn make-ui
-  "Takes a tree of elements and creates Android UI elements according
-  to this tree. A tree has a form of a vector that looks like following:
+  "Takes an activity instance, and a tree of elements and creates Android UI
+  elements according to this tree. A tree has a form of a vector that looks like
+  following:
 
-  `[element-name map-of-attributes & subelements]`
-
-  where `map-of-attributes` is a map of attribute names to their
-  values, and subelement is itself a tree of this form.
-
-  Two-argument version takes an arbitrary Context object to use in UI
-  elements constructor."
+  `[element-name map-of-attributes & subelements]`."
+  {:forms '([activity tree])}
   ([tree]
+     (println "One-argument version is deprecated. Please use (make-ui activity tree)")
      (make-ui-element context/context tree {}))
-  ([context tree]
-     (make-ui-element context tree {})))
+  ([activity tree]
+     (make-ui-element activity tree {})))
 
 (defn config
   "Takes a widget and key-value pairs of attributes, and applies these

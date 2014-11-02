@@ -2,7 +2,6 @@
   "Contains trait declarations for various UI elements."
   (:require [neko.ui.mapping :as kw]
             [neko.resource :as res]
-            [neko.context :as context]
             [neko.listeners.view :as view-listeners]
             [neko.listeners.text-view :as text-view-listeners]
             [neko.listeners.adapter-view :as adapter-view]
@@ -16,6 +15,7 @@
            android.graphics.Bitmap android.graphics.drawable.Drawable
            android.net.Uri
            android.util.TypedValue
+           android.content.Context
            java.util.HashMap
            clojure.lang.Keyword))
 
@@ -157,14 +157,17 @@ next-level elements."
 (memoized
  (defn- get-display-metrics
    "Returns Android's DisplayMetrics object from application context."
-   []
-   (.. context/context (getResources) (getDisplayMetrics))))
+   [^Context context]
+   (.. context (getResources) (getDisplayMetrics))))
 
-(defn to-dimension [value]
+(require 'neko.activity)
+
+(defn to-dimension [context value]
   (if (vector? value)
     (Math/round
-     ^float (TypedValue/applyDimension (kw->unit-id (second value))
-                                       (first value) (get-display-metrics)))
+     ^float (TypedValue/applyDimension
+             (kw->unit-id (second value))
+             (first value) (get-display-metrics context)))
     value))
 
 (deftrait :text-size
@@ -196,9 +199,9 @@ next-level elements."
 (defn- apply-margins-to-layout-params
   "Takes a LayoutParams object that implements MarginLayoutParams
   class and an attribute map, and sets margins for this object."
-  [^ViewGroup$MarginLayoutParams params, attribute-map]
-  (let [common (to-dimension (attribute-map :layout-margin 0))
-        [l t r b] (map #(to-dimension (attribute-map % common))
+  [context, ^ViewGroup$MarginLayoutParams params, attribute-map]
+  (let [common (to-dimension context (attribute-map :layout-margin 0))
+        [l t r b] (map #(to-dimension context (attribute-map % common))
                        (rest margin-attributes))]
     (.setMargins params l t r b)))
 
@@ -227,7 +230,7 @@ next-level elements."
         height (kw/value :layout-params (or layout-height :wrap))
         weight (or layout-weight 0)
         params (LinearLayout$LayoutParams. width height weight)]
-    (apply-margins-to-layout-params params attributes)
+    (apply-margins-to-layout-params (.getContext wdg) params attributes)
     (when layout-gravity
       (set! (. params gravity)
             (kw/value :layout-params layout-gravity :gravity)))
@@ -284,7 +287,7 @@ next-level elements."
     (doseq [[attr-name attr-id] (:with-id relative-layout-attributes)]
       (when (contains? attributes attr-name)
         (.addRule lp attr-id (to-id (attr-name attributes)))))
-    (apply-margins-to-layout-params lp attributes)
+    (apply-margins-to-layout-params (.getContext wdg) lp attributes)
     (.setLayoutParams wdg lp)))
 
 (deftrait :listview-layout-params
@@ -308,13 +311,14 @@ next-level elements."
   following: :px, :dip, :sp, :pt, :in, :mm."
   {:attributes [:padding :padding-bottom :padding-left
                 :padding-right :padding-top]}
-  [wdg {:keys [padding padding-bottom padding-left
-               padding-right padding-top]} _]
-  (.setPadding ^View wdg
-               (to-dimension (or padding-left padding 0))
-               (to-dimension (or padding-top padding 0))
-               (to-dimension (or padding-right padding 0))
-               (to-dimension (or padding-bottom padding 0))))
+  [^View wdg {:keys [padding padding-bottom padding-left
+                     padding-right padding-top]} _]
+  (let [ctx (.getContext wdg)]
+    (.setPadding wdg
+                 (to-dimension ctx (or padding-left padding 0))
+                 (to-dimension ctx (or padding-top padding 0))
+                 (to-dimension ctx (or padding-right padding 0))
+                 (to-dimension ctx (or padding-bottom padding 0)))))
 
 (deftrait :container
   "Puts the type of the widget onto the options map so subelement can

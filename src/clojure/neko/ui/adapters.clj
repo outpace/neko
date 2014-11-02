@@ -22,12 +22,12 @@
      {:pre [(fn? create-view-fn) (fn? update-view-fn)
             (instance? clojure.lang.IFn access-fn)
             (instance? clojure.lang.IDeref ref-type)]}
-     (let [create-fn (fn []
+     (let [create-fn (fn [context]
                        (let [view (create-view-fn)]
                          (if (instance? View view)
                            view
                            (make-ui-element
-                            neko.context/context view
+                            context view
                             {:container-type :abs-listview-layout}))))
            adapter (InterchangeableListAdapter. create-fn update-view-fn
                                                 (access-fn @ref-type))]

@@ -56,7 +56,7 @@ public class InterchangeableListAdapter extends BaseAdapter {
     public View getView(int position, View convertView, ViewGroup parent) {
         View view = convertView;
         if (view == null) {
-            view = (View)createViewFn.invoke();
+            view = (View)createViewFn.invoke(parent.getContext());
         }
         updateViewFn.invoke(position, view, parent, data.get(position));
         return view;

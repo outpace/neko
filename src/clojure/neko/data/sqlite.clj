@@ -7,7 +7,7 @@
   (:use [neko.context :only [context]])
   (:import [android.database.sqlite SQLiteDatabase SQLiteOpenHelper]
            android.database.Cursor
-           android.content.ContentValues
+           [android.content ContentValues Context]
            [clojure.lang Keyword PersistentVector]))
 
 ;; ### Database initialization
@@ -21,7 +21,7 @@
   "Creates a schema from arguments and validates it."
   [& {:as schema}]
   (assert (string? (:name schema)) ":name should be a String.")
-  (assert (number? (:version schema)) ":version should be an number.")
+  (assert (number? (:version schema)) ":version should be a number.")
   (assert (map? (:tables schema)) ":tables should be a map.")
   (doseq [[table-name params] (:tables schema)]
     (assert (keyword? table-name)
@@ -56,15 +56,20 @@
 
   Helper will recreate database if the current schema version and
   database version mismatch."
-  [{:keys [name version tables] :as schema}]
-  (proxy [SQLiteOpenHelper] [context name nil version]
-    (onCreate [^SQLiteDatabase db]
-      (doseq [table (keys tables)]
-        (.execSQL db (db-create-query schema table))))
-    (onUpgrade [^SQLiteDatabase db old new]
-      (doseq [^Keyword table (keys tables)]
-        (.execSQL db (str "drop table if exists " (.getName table))))
-      (.onCreate ^SQLiteOpenHelper this db))))
+  {:forms '([context schema])}
+  ([schema]
+     (println "One-argument version is deprecated. Please use (create-helper context schema)")
+     (create-helper context schema))
+  ([^Context context, {:keys [name version tables] :as schema}]
+     (proxy [SQLiteOpenHelper] [(.getApplicationContext context)
+                                name nil version]
+       (onCreate [^SQLiteDatabase db]
+         (doseq [table (keys tables)]
+           (.execSQL db (db-create-query schema table))))
+       (onUpgrade [^SQLiteDatabase db old new]
+         (doseq [^Keyword table (keys tables)]
+           (.execSQL db (str "drop table if exists " (.getName table))))
+         (.onCreate ^SQLiteOpenHelper this db)))))
 
 ;; A wrapper around SQLiteDatabase to keep database and its schema
 ;; together.
@@ -72,15 +77,18 @@
 (deftype TaggedDatabase [db schema])
 
 (defn get-database
-  "Returns SQLiteDatabase instance for the given schema. Access-mode
-  could be either `:read` or `:write`."
-  [schema access-mode]
-  {:pre [(#{:read :write} access-mode)]}
-  (let [helper (create-helper schema)]
-    (TaggedDatabase. (case access-mode
-                       :read (.getReadableDatabase helper)
-                       :write (.getWritableDatabase helper))
-                     schema)))
+  "Returns SQLiteDatabase instance for the given schema. Access-mode can be
+  either `:read` or `:write`."
+  {:forms '([context schema access-mode])}
+  ([schema access-mode]
+     (println "Two-argument version is deprecated. Please use (get-database context schema access-mode)"))
+  ([context schema access-mode]
+     {:pre [(#{:read :write} access-mode)]}
+     (let [helper (create-helper context schema)]
+       (TaggedDatabase. (case access-mode
+                          :read (.getReadableDatabase helper)
+                          :write (.getWritableDatabase helper))
+                        schema))))
 
 ;; ### Data-SQL transformers
 

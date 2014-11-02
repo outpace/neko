@@ -227,9 +227,11 @@ Use (*a) to get the current activity."))
   was provided, it is inflated and then set as fragment's view."
   ([context tree]
      (simple-fragment (make-ui context tree)))
-  ([view-or-tree]
+  ([view]
      (proxy [Fragment] []
        (onCreateView [inflater container bundle]
-         (if (instance? View view-or-tree)
-           view-or-tree
-           (make-ui view-or-tree))))))
+         (if (instance? View view)
+           view
+           (do
+             (println "One-argument version is deprecated. Please use (simple-fragment context tree)")
+             (make-ui view)))))))

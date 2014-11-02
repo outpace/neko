@@ -154,8 +154,7 @@
   "Takes `:action-view` attribute which should either be a View
   instance or a UI definition tree, and sets it as an action view for
   the menu item. For UI tree syntax see docs for `neko.ui/make-ui`.
-  Custom context can be used for UI inflation by providing `:context`
-  attribute."
+  Activity instance should be provided via `:context` attribute."
   {:attributes [:action-view :context]
    :applies? (:action-view attrs)}
   [^MenuItem wdg, {:keys [action-view context] :as attrs} _]
