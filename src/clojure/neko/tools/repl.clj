@@ -2,7 +2,8 @@
   (:require neko.log)
   (:import android.content.Context
            java.util.concurrent.atomic.AtomicLong
-           java.util.concurrent.ThreadFactory))
+           java.util.concurrent.ThreadFactory
+           java.io.FileNotFoundException))
 
 (def cider-middleware
   "A vector containing all CIDER middleware."
@@ -18,6 +19,11 @@
     cider.nrepl.middleware.test/wrap-test
     cider.nrepl.middleware.trace/wrap-trace
     cider.nrepl.middleware.undef/wrap-undef])
+
+(defn cider-available? []
+  (try (require 'cider.nrepl.version)
+       true
+       (catch FileNotFoundException e false)))
 
 (defn android-thread-factory
   "Returns a new ThreadFactory with increased stack size. It is used to
@@ -71,8 +77,10 @@
   (when (or (not (:neko.init/release-build *compiler-options*))
             (:neko.init/start-nrepl-server *compiler-options*))
     (let [build-port (:neko.init/nrepl-port *compiler-options*)
-          mware (list `quote (or (:neko.init/nrepl-middleware *compiler-options*)
-                                 cider-middleware))]
+          mware (when (cider-available?)
+                  (list `quote
+                        (or (:neko.init/nrepl-middleware *compiler-options*)
+                            cider-middleware)))]
       `(let [port# (or ~port ~build-port 9999)]
          (apply start-repl ~mware :port port# ~other-args)
          (neko.log/i "Nrepl started at port" port#)))))
