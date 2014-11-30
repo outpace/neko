@@ -140,7 +140,7 @@ next-level elements."
 (deftrait :text
   "Sets widget's text to a string, integer ID or a keyword
   representing the string resource provided to `:text` attribute."
-  [^TextView wdg, {:keys [text]} _]
+  [^TextView wdg, {:keys [text] :or {text ""}} _]
   (.setText wdg ^CharSequence (res/get-string text)))
 
 (defn- kw->unit-id [unit-kw]
@@ -159,8 +159,6 @@ next-level elements."
    "Returns Android's DisplayMetrics object from application context."
    [^Context context]
    (.. context (getResources) (getDisplayMetrics))))
-
-(require 'neko.activity)
 
 (defn to-dimension [context value]
   (if (vector? value)
