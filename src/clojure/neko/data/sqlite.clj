@@ -6,6 +6,7 @@
   (:require [clojure.string :as string])
   (:use [neko.context :only [context]])
   (:import [android.database.sqlite SQLiteDatabase SQLiteOpenHelper]
+           neko.data.sqlite.SQLiteHelper
            android.database.Cursor
            [android.content ContentValues Context]
            [clojure.lang Keyword PersistentVector]))
@@ -61,15 +62,11 @@
      (println "One-argument version is deprecated. Please use (create-helper context schema)")
      (create-helper context schema))
   ([^Context context, {:keys [name version tables] :as schema}]
-     (proxy [SQLiteOpenHelper] [(.getApplicationContext context)
-                                name nil version]
-       (onCreate [^SQLiteDatabase db]
-         (doseq [table (keys tables)]
-           (.execSQL db (db-create-query schema table))))
-       (onUpgrade [^SQLiteDatabase db old new]
-         (doseq [^Keyword table (keys tables)]
-           (.execSQL db (str "drop table if exists " (.getName table))))
-         (.onCreate ^SQLiteOpenHelper this db)))))
+   (SQLiteHelper. (.getApplicationContext context) name version
+                  (for [table (keys tables)]
+                    (db-create-query schema table))
+                  (for [^Keyword table (keys tables)]
+                    (str "drop table if exists " (.getName table))))))
 
 ;; A wrapper around SQLiteDatabase to keep database and its schema
 ;; together.
