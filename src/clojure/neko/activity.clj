@@ -12,12 +12,13 @@
 (ns neko.activity
   "Utilities to aid in working with an activity."
   {:author "Daniel Solano Gómez"}
+  (:require neko.init
+            [neko.ui :refer [make-ui]]
+            [neko.-utils :refer :all])
   (:import android.app.Activity
            android.view.View
-           android.app.Fragment)
-  (:require neko.init)
-  (:use [neko.ui :only [make-ui]]
-        neko.-utils))
+           android.app.Fragment
+           java.util.WeakHashMap))
 
 (def
   ^{:doc "The current activity to operate on."
@@ -27,6 +28,7 @@
 (defmacro with-activity
   "Evaluates body such that *activity* is bound to the given activity."
   [activity & body]
+  (println "WARNING: with-activity and any usage of *activity* is deprecated.")
   `(binding [*activity* ~activity]
      ~@body))
 
@@ -41,24 +43,32 @@
   (and (bound? #'*activity*)
        (activity? *activity*)))
 
+(defn ^View get-decor-view
+  "Returns the root view of the given activity."
+  [^Activity activity]
+  (.. activity getWindow getDecorView))
+
 (defn set-content-view!
   "Sets the content for the activity.  The view may be one of:
 
+  + neko.ui tree
   + A view object, which will be used directly
   + An integer presumed to be a valid layout ID."
   ([view]
-   {:pre [(or (instance? View view)
-              (integer? view))]}
    (set-content-view! *activity* view))
-  ([^Activity activity view]
-   {:pre [(activity? activity)
-          (or (instance? View view)
-              (integer? view))]}
+  ([^Activity activity, view]
+   {:pre [(activity? activity)]}
    (cond
-     (instance? View view)
+    (instance? View view)
        (.setContentView activity ^View view)
-     (integer? view)
-       (.setContentView activity ^Integer view))))
+    (integer? view)
+       (.setContentView activity ^Integer view)
+    :else
+       (let [dv (get-decor-view activity)]
+         (.setTag dv (java.util.HashMap.))
+         (.setContentView activity
+                          ^View (neko.ui/make-ui-element activity view
+                                                         {:id-holder dv}))))))
 
 (defn request-window-features!
   "Requests the given features for the activity.  The features should be
@@ -96,6 +106,20 @@
                                                 k))))))]
     (doall (map request-feature features))))
 
+(def ^WeakHashMap all-activities
+  "Weak hashmap that contains mapping of namespaces or
+  keywords to Activity objects."
+  (WeakHashMap.))
+
+(defmacro ^Activity *a
+  "If called without arguments, returns the activity for the current
+  namespace. A version with one argument will return the activity for
+  the given object (be it a namespace or any other object)."
+  ([]
+     `(get all-activities ~*ns*))
+  ([key]
+     `(get all-activities ~key)))
+
 (defmacro defactivity
   "Creates an activity with the given full package-qualified name.
   Optional arguments should be provided in a key-value fashion.
@@ -118,12 +142,14 @@
   - same as :on-create but require a one-argument function."
   [name & {:keys [extends prefix on-create on-create-options-menu
                   on-options-item-selected on-activity-result
-                  on-new-intent def state]
+                  on-new-intent def state key]
            :as options}]
   (let [options (or options {}) ;; Handle no-options case
         sname (simple-name name)
-        prefix (or prefix (str sname "-"))
-        def (or def (symbol (unicaseize sname)))]
+        prefix (or prefix (str sname "-"))]
+    (when def
+      (println "WARNING: :def attribute in defactivity is deprecated.
+Use (*a) to get the current activity."))
     `(do
        (gen-class
         :name ~name
@@ -156,6 +182,9 @@
              ~(when (and (not (:neko.init/release-build *compiler-options*))
                          def)
                 `(def ~(vary-meta def assoc :tag name) ~'this))
+             (.put all-activities ~*ns* ~'this)
+             ~(when key
+                `(.put all-activities ~key ~'this))
              (neko.init/init (.getApplicationContext ~'this))
              (~on-create ~'this ~'savedInstanceState)))
        ~(when on-create-options-menu
@@ -200,9 +229,11 @@
   was provided, it is inflated and then set as fragment's view."
   ([context tree]
      (simple-fragment (make-ui context tree)))
-  ([view-or-tree]
+  ([view]
      (proxy [Fragment] []
        (onCreateView [inflater container bundle]
-         (if (instance? View view-or-tree)
-           view-or-tree
-           (make-ui view-or-tree))))))
+         (if (instance? View view)
+           view
+           (do
+             (println "One-argument version is deprecated. Please use (simple-fragment context tree)")
+             (make-ui view)))))))

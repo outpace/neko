@@ -1,14 +1,3 @@
-; Copyright © 2011 Sattvik Software & Technology Resources, Ltd. Co.
-; All rights reserved.
-;
-; This program and the accompanying materials are made available under the
-; terms of the Eclipse Public License v1.0 which accompanies this distribution,
-; and is available at <http://www.eclipse.org/legal/epl-v10.html>.
-;
-; By using this software in any fashion, you are agreeing to be bound by the
-; terms of this license.  You must not remove this notice, or any other, from
-; this software.
-
 (ns neko.log
   "Utility for logging in Android. There are five logging macros: `i`,
   `d`, `e`, `v`, `w`; for different purposes. Each of them takes
@@ -18,9 +7,9 @@
 
     (require '[neko.log :as log])
 
-    (neko.log/d \"Some log string\" {:foo 1, :bar 2})
-    (neko.log/i \"Logging to custom tag\" [1 2 3] :tag \"custom\")
-    (neko.log/e \"Something went wrong\" [1 2 3] :exception ex)"
+    (log/d \"Some log string\" {:foo 1, :bar 2})
+    (log/i \"Logging to custom tag\" [1 2 3] :tag \"custom\")
+    (log/e \"Something went wrong\" [1 2 3] :exception ex)"
   {:author "Adam Clements"}
   (:import android.util.Log))
 
@@ -31,10 +20,10 @@
           {:keys [exception tag]} (if (odd? (count kwargs))
                                     (butlast kwargs)
                                     kwargs)
-          tag (or tag (str *ns*))]
-      (if exception
-        `(. Log ~logfn ~tag (apply str (interpose " " [~@strings])) ~exception)
-        `(. Log ~logfn ~tag (apply str (interpose " " [~@strings])))))))
+          tag (or tag (str *ns*))
+          ex-form (if exception [exception] ())]
+      `(binding [*print-readably* nil]
+         (. Log ~logfn ~tag (pr-str ~@strings) ~@ex-form)))))
 
 (defmacro e
   "Log an ERROR message, applying pr-str to all the arguments and taking

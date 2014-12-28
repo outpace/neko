@@ -1,14 +1,3 @@
-; Copyright © 2012 Alexander Yakushev.
-; All rights reserved.
-;
-; This program and the accompanying materials are made available under the
-; terms of the Eclipse Public License v1.0 which accompanies this distribution,
-; and is available at <http://www.eclipse.org/legal/epl-v10.html>.
-;
-; By using this software in any fashion, you are agreeing to be bound by the
-; terms of this license.  You must not remove this notice, or any other, from
-; this software.
-
 (ns neko.ui.adapters
   "Contains custom adapters for ListView and Spinner."
   (:use [neko.threading :only [on-ui]]
@@ -33,12 +22,12 @@
      {:pre [(fn? create-view-fn) (fn? update-view-fn)
             (instance? clojure.lang.IFn access-fn)
             (instance? clojure.lang.IDeref ref-type)]}
-     (let [create-fn (fn []
+     (let [create-fn (fn [context]
                        (let [view (create-view-fn)]
                          (if (instance? View view)
                            view
                            (make-ui-element
-                            neko.context/context view
+                            context view
                             {:container-type :abs-listview-layout}))))
            adapter (InterchangeableListAdapter. create-fn update-view-fn
                                                 (access-fn @ref-type))]

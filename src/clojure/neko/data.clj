@@ -91,12 +91,16 @@
                                 :world-writeable Context/MODE_WORLD_WRITEABLE})
 
 (defn get-shared-preferences
-  "Returns the SharedPreferences object for the given name."
-  [name mode]
-  {:pre [(or (number? mode) (contains? sp-access-modes mode))]}
-  (let [mode (if (number? mode)
-               mode (sp-access-modes mode))]
-    (.getSharedPreferences context name mode)))
+  "Returns the SharedPreferences object for the given name. Possible modes:
+  `:private`, `:world-readable`, `:world-writeable`."
+  {:forms '([context name mode])}
+  ([name mode]
+     (println "Two-argument version is deprecated. Please use (get-shared-preferences context name mode)"))
+  ([^Context context name mode]
+     {:pre [(or (number? mode) (contains? sp-access-modes mode))]}
+     (let [mode (if (number? mode)
+                  mode (sp-access-modes mode))]
+       (.getSharedPreferences context name mode))))
 
 (defn ^SharedPreferences$Editor assoc!
   "Puts the value into the SharedPreferences editor instance. Accepts

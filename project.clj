@@ -1,4 +1,4 @@
-(defproject neko "3.0.2"
+(defproject neko "3.1.0-SNAPSHOT"
   :description "Neko is a toolkit designed to make Android development using Clojure easier and more fun."
   :url "https://github.com/clojure-android/neko"
   :license {:name "Eclipse Public License"
@@ -7,6 +7,8 @@
   :source-paths ["src" "src/clojure"]
   :java-source-paths ["src/java" "gen"]
 
-  :javac-options ["-target" "1.6" "-source" "1.6" "-Xlint:-options"]
+  :profiles {:default [:user :dev :android-common]}
+  :plugins [[lein-droid "0.3.0-beta2"]]
+
   :android {:library true
             :target-version :ics})

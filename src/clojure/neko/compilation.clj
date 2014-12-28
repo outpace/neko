@@ -31,28 +31,14 @@
         :private true}
   cache-dir (atom nil))
 
-(def #^{:doc "The default name of the cache directory."}
-  default-cache-dir "clojure_cache")
-
-(defn- cache-file?
-  "Predicate for determining if a given file name is a cache file."
-  [^String name]
-  (and (.startsWith name "repl-")
-       (or (.endsWith name ".dex")
-           (.endsWith name ".jar"))))
-
 (defn clear-cache
-  "Clears all DEX and JAR files from the cache directory."
+  "Clears all files from the cache directory."
   []
-  (locking cache-dir
-    (let [^File dir @cache-dir
-          delete-file (fn [^String name] (.delete (File. dir name)))]
-      (when dir
-        (->>
-          (.list dir)
-          (filter cache-file?)
-          (map delete-file)
-          (dorun))))))
+  (monitor-enter cache-dir)
+  (try (when-let [^File dir @cache-dir]
+         (doseq [^File f (.listFiles dir)]
+           (.delete f)))
+       (finally (monitor-exit cache-dir))))
 
 (defn get-data-readers [^Context context]
   (when-let [readers-file (try (.open (.getAssets context) "data_readers.clj")
@@ -66,15 +52,14 @@
 (defn init
   "Initializes the compilation path, creating or cleaning cache directory as
   necessary."
-  ([^Context context dir-name]
-   (locking cache-dir
+  ([^Context context]
      (when-not @cache-dir
-       (let [dir  (.getDir context dir-name Context/MODE_PRIVATE)
+       (let [^File dir  (File. (.getCacheDir context) "clojure_repl")
              path (.getAbsolutePath dir)]
          (reset! cache-dir dir)
+         (.mkdir dir)
+         (clear-cache)
          (System/setProperty "clojure.compile.path" path)
          (alter-var-root #'clojure.core/*data-readers*
                          (constantly (get-data-readers context)))
          (alter-var-root #'clojure.core/*compile-path* (constantly path))))))
-  ([context]
-   (init context default-cache-dir)))

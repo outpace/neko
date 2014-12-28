@@ -1,4 +1,4 @@
-* Neko: The Clojure/Android Toolkit
+* [[https://raw.githubusercontent.com/clojure-android/neko/3.1/doc/big_logo.png]]
 
   Neko is a toolkit designed to make Android development using Clojure
   easier and more fun. It accomplishes this by making adding Clojure
@@ -25,9 +25,9 @@
    [[https://github.com/clojure-android/lein-droid/wiki/Tutorial][Tutorial]].
 
    For detailed information on available features and utilities,
-   please consult the [[https://github.com/clojure-android/neko/wiki][wiki]].
+   please consult the [[https://github.com/alexander-yakushev/neko/wiki][wiki]].
 
-   Marginalia docs are available [[http://clojure-android.github.io/neko/][here]].
+   Marginalia docs are available [[http://alexander-yakushev.github.io/neko/][here]].
 
 ** How to build Neko yourself
 
@@ -51,6 +51,8 @@
    project.
 
    I also thank all the [[https://github.com/alexander-yakushev/neko/graphs/contributors][contributors]] to Neko.
+   
+   Cat icon used in the logo is designed by [[http://www.freepik.com/][Freepik]]  from Flaticon.com.
 
 ** Legal information
 

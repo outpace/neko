@@ -12,7 +12,8 @@
 (ns neko.listeners.view
   "Utility functions and macros for setting listeners corresponding to the
   android.view.View class."
-  {:author "Daniel Solano Gómez"})
+  {:author "Daniel Solano Gómez"}
+  (:require [neko.debug :refer [safe-for-ui]]))
 
 (defn on-click-call
   "Takes a function and yields a View.OnClickListener object that will invoke
@@ -21,7 +22,7 @@
   [handler-fn]
   (reify android.view.View$OnClickListener
     (onClick [this view]
-      (handler-fn view))))
+      (safe-for-ui (handler-fn view)))))
 
 (defmacro on-click
   "Takes a body of expressions and yields a View.OnClickListener object that
@@ -42,7 +43,7 @@
   [handler-fn]
   (reify android.view.View$OnCreateContextMenuListener
     (onCreateContextMenu [this menu view info]
-      (handler-fn menu view info))))
+      (safe-for-ui (handler-fn menu view info)))))
 
 (defmacro on-create-context-menu
   "Takes a body of expressions and yields a View.OnCreateContextMenuListener
@@ -64,7 +65,7 @@
   [handler-fn]
   (reify android.view.View$OnDragListener
     (onDrag [this view event]
-      (handler-fn view event))))
+      (safe-for-ui (handler-fn view event)))))
 
 (defmacro on-drag
   "Takes a body of expressions and yields a View.OnDragListener object that
@@ -84,7 +85,7 @@
   [handler-fn]
   (reify android.view.View$OnFocusChangeListener
     (onFocusChange [this view focused?]
-      (handler-fn view focused?))))
+      (safe-for-ui (handler-fn view focused?)))))
 
 (defmacro on-focus-change
   "Takes a body of expressions and yields a View.OnFocusChangeListener object
@@ -109,7 +110,7 @@
   [handler-fn]
   (reify android.view.View$OnKeyListener
     (onKey [this view key-code event]
-      (boolean (handler-fn view key-code event)))))
+      (safe-for-ui (boolean (handler-fn view key-code event))))))
 
 (defmacro on-key
   "Takes a body of expressions and yields a View.OnKeyListener object that will
@@ -133,8 +134,8 @@
   (reify android.view.View$OnLayoutChangeListener
     (onLayoutChange [this view left top right bottom
                      old-left old-top old-right old-bottom]
-      (handler-fn view left top right bottom
-                  old-left olt-top old-right old-bottom))))
+      (safe-for-ui (handler-fn view left top right bottom
+                               old-left olt-top old-right old-bottom)))))
 
 (defmacro on-layout-change
   "Takes a body of expressions and yields a View.OnLayoutChangeListener
@@ -162,7 +163,7 @@
   [handler-fn]
   (reify android.view.View$OnLongClickListener
     (onLongClick [this view]
-      (boolean (handler-fn view)))))
+      (safe-for-ui (boolean (handler-fn view))))))
 
 (defmacro on-long-click
   "Takes a body of expressions and yields a View.OnLongClickListener object
@@ -181,7 +182,7 @@
   [handler-fn]
   (reify android.view.View$OnSystemUiVisibilityChangeListener
     (onLongClick [this view]
-      (handler-fn view))))
+      (safe-for-ui (handler-fn view)))))
 
 (defmacro on-system-ui-visibility-change
   "Takes a body of expressions and yields a
@@ -203,7 +204,7 @@
   [handler-fn]
   (reify android.view.View$OnTouchListener
     (onTouch [this view event]
-      (boolean (handler-fn view event)))))
+      (safe-for-ui (boolean (handler-fn view event))))))
 
 (defmacro on-touch
   "Takes a body of expressions and yields a View.OnTouchListener object that

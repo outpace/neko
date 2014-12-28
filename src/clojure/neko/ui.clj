@@ -1,14 +1,3 @@
-; Copyright © 2012-2013 Alexander Yakushev.
-; All rights reserved.
-;
-; This program and the accompanying materials are made available under the
-; terms of the Eclipse Public License v1.0 which accompanies this distribution,
-; and is available at <http://www.eclipse.org/legal/epl-v10.html>.
-;
-; By using this software in any fashion, you are agreeing to be bound by the
-; terms of this license.  You must not remove this notice, or any other, from
-; this software.
-
 (ns neko.ui
   "Tools for defining and manipulating Android UI elements."
   (:use [neko.-utils :only [keyword->setter reflect-setter reflect-constructor]]
@@ -93,20 +82,17 @@
     tree))
 
 (defn make-ui
-  "Takes a tree of elements and creates Android UI elements according
-  to this tree. A tree has a form of a vector that looks like following:
+  "Takes an activity instance, and a tree of elements and creates Android UI
+  elements according to this tree. A tree has a form of a vector that looks like
+  following:
 
-  `[element-name map-of-attributes & subelements]`
-
-  where `map-of-attributes` is a map of attribute names to their
-  values, and subelement is itself a tree of this form.
-
-  Two-argument version takes an arbitrary Context object to use in UI
-  elements constructor."
+  `[element-name map-of-attributes & subelements]`."
+  {:forms '([activity tree])}
   ([tree]
+     (println "One-argument version is deprecated. Please use (make-ui activity tree)")
      (make-ui-element context/context tree {}))
-  ([context tree]
-     (make-ui-element context tree {})))
+  ([activity tree]
+     (make-ui-element activity tree {})))
 
 (defn config
   "Takes a widget and key-value pairs of attributes, and applies these

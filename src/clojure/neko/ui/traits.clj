@@ -1,24 +1,13 @@
-; Copyright © 2012 Alexander Yakushev.
-; All rights reserved.
-;
-; This program and the accompanying materials are made available under the
-; terms of the Eclipse Public License v1.0 which accompanies this distribution,
-; and is available at <http://www.eclipse.org/legal/epl-v10.html>.
-;
-; By using this software in any fashion, you are agreeing to be bound by the
-; terms of this license.  You must not remove this notice, or any other, from
-; this software.
-
 (ns neko.ui.traits
   "Contains trait declarations for various UI elements."
   (:require [neko.ui.mapping :as kw]
             [neko.resource :as res]
-            [neko.context :as context]
             [neko.listeners.view :as view-listeners]
             [neko.listeners.text-view :as text-view-listeners]
+            [neko.listeners.adapter-view :as adapter-view]
             neko.listeners.search-view)
   (:use [neko.-utils :only [memoized]])
-  (:import [android.widget LinearLayout$LayoutParams TextView SearchView
+  (:import [android.widget LinearLayout$LayoutParams ListView TextView SearchView
             ImageView RelativeLayout RelativeLayout$LayoutParams
             AbsListView$LayoutParams]
            [android.view View ViewGroup$LayoutParams
@@ -26,6 +15,7 @@
            android.graphics.Bitmap android.graphics.drawable.Drawable
            android.net.Uri
            android.util.TypedValue
+           android.content.Context
            java.util.HashMap
            clojure.lang.Keyword))
 
@@ -150,7 +140,7 @@ next-level elements."
 (deftrait :text
   "Sets widget's text to a string, integer ID or a keyword
   representing the string resource provided to `:text` attribute."
-  [^TextView wdg, {:keys [text]} _]
+  [^TextView wdg, {:keys [text] :or {text ""}} _]
   (.setText wdg ^CharSequence (res/get-string text)))
 
 (defn- kw->unit-id [unit-kw]
@@ -167,14 +157,15 @@ next-level elements."
 (memoized
  (defn- get-display-metrics
    "Returns Android's DisplayMetrics object from application context."
-   []
-   (.. context/context (getResources) (getDisplayMetrics))))
+   [^Context context]
+   (.. context (getResources) (getDisplayMetrics))))
 
-(defn to-dimension [value]
+(defn to-dimension [context value]
   (if (vector? value)
     (Math/round
-     ^float (TypedValue/applyDimension (kw->unit-id (second value))
-                                       (first value) (get-display-metrics)))
+     ^float (TypedValue/applyDimension
+             (kw->unit-id (second value))
+             (first value) (get-display-metrics context)))
     value))
 
 (deftrait :text-size
@@ -206,9 +197,9 @@ next-level elements."
 (defn- apply-margins-to-layout-params
   "Takes a LayoutParams object that implements MarginLayoutParams
   class and an attribute map, and sets margins for this object."
-  [^ViewGroup$MarginLayoutParams params, attribute-map]
-  (let [common (to-dimension (attribute-map :layout-margin 0))
-        [l t r b] (map #(to-dimension (attribute-map % common))
+  [context, ^ViewGroup$MarginLayoutParams params, attribute-map]
+  (let [common (to-dimension context (attribute-map :layout-margin 0))
+        [l t r b] (map #(to-dimension context (attribute-map % common))
                        (rest margin-attributes))]
     (.setMargins params l t r b)))
 
@@ -237,7 +228,7 @@ next-level elements."
         height (kw/value :layout-params (or layout-height :wrap))
         weight (or layout-weight 0)
         params (LinearLayout$LayoutParams. width height weight)]
-    (apply-margins-to-layout-params params attributes)
+    (apply-margins-to-layout-params (.getContext wdg) params attributes)
     (when layout-gravity
       (set! (. params gravity)
             (kw/value :layout-params layout-gravity :gravity)))
@@ -294,7 +285,7 @@ next-level elements."
     (doseq [[attr-name attr-id] (:with-id relative-layout-attributes)]
       (when (contains? attributes attr-name)
         (.addRule lp attr-id (to-id (attr-name attributes)))))
-    (apply-margins-to-layout-params lp attributes)
+    (apply-margins-to-layout-params (.getContext wdg) lp attributes)
     (.setLayoutParams wdg lp)))
 
 (deftrait :listview-layout-params
@@ -318,13 +309,14 @@ next-level elements."
   following: :px, :dip, :sp, :pt, :in, :mm."
   {:attributes [:padding :padding-bottom :padding-left
                 :padding-right :padding-top]}
-  [wdg {:keys [padding padding-bottom padding-left
-               padding-right padding-top]} _]
-  (.setPadding ^View wdg
-               (to-dimension (or padding-left padding 0))
-               (to-dimension (or padding-top padding 0))
-               (to-dimension (or padding-right padding 0))
-               (to-dimension (or padding-bottom padding 0))))
+  [^View wdg {:keys [padding padding-bottom padding-left
+                     padding-right padding-top]} _]
+  (let [ctx (.getContext wdg)]
+    (.setPadding wdg
+                 (to-dimension ctx (or padding-left padding 0))
+                 (to-dimension ctx (or padding-top padding 0))
+                 (to-dimension ctx (or padding-right padding 0))
+                 (to-dimension ctx (or padding-bottom padding 0)))))
 
 (deftrait :container
   "Puts the type of the widget onto the options map so subelement can
@@ -431,3 +423,16 @@ next-level elements."
   (.setId wdg (to-id id))
   (when id-holder
     (.put ^HashMap (.getTag id-holder) id wdg)))
+
+(deftrait :on-item-click
+  "Takes :on-item-click attribute, which should be function of four arguments
+
+    parent   AdapterView of the originating click
+    view     Item view
+    position Item view position
+    id       Item view row id
+
+  and sets it as an OnItemClickListener for the widget."
+  [^ListView wdg, {:keys [on-item-click]} _]
+  (.setOnItemClickListener wdg (adapter-view/on-item-click-call on-item-click)))
+

@@ -1,14 +1,3 @@
-; Copyright © 2013 Alexander Yakushev.
-; All rights reserved.
-;
-; This program and the accompanying materials are made available under the
-; terms of the Eclipse Public License v1.0 which accompanies this distribution,
-; and is available at <http://www.eclipse.org/legal/epl-v10.html>.
-;
-; By using this software in any fashion, you are agreeing to be bound by the
-; terms of this license.  You must not remove this notice, or any other, from
-; this software.
-
 (ns neko.ui.menu
   "Provides utilities for declarative options menu generation.
   Intended to replace XML-based menu layouts."
@@ -165,8 +154,7 @@
   "Takes `:action-view` attribute which should either be a View
   instance or a UI definition tree, and sets it as an action view for
   the menu item. For UI tree syntax see docs for `neko.ui/make-ui`.
-  Custom context can be used for UI inflation by providing `:context`
-  attribute."
+  Activity instance should be provided via `:context` attribute."
   {:attributes [:action-view :context]
    :applies? (:action-view attrs)}
   [^MenuItem wdg, {:keys [action-view context] :as attrs} _]

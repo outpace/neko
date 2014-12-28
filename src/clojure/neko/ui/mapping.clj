@@ -1,14 +1,3 @@
-; Copyright © 2012 Alexander Yakushev.
-; All rights reserved.
-;
-; This program and the accompanying materials are made available under the
-; terms of the Eclipse Public License v1.0 which accompanies this distribution,
-; and is available at <http://www.eclipse.org/legal/epl-v10.html>.
-;
-; By using this software in any fashion, you are agreeing to be bound by the
-; terms of this license.  You must not remove this notice, or any other, from
-; this software.
-
 (ns neko.ui.mapping
   "This namespace provides utilities to connect the keywords to the
   actual UI classes, define the hierarchy relations between the
@@ -51,7 +40,8 @@
                 {:ellipsize android.text.TextUtils$TruncateAt}
                 :traits [:text :text-size :on-editor-action]}
     :list-view {:classname android.widget.ListView
-                :inherits :view-group}
+                :inherits :view-group
+                :traits [:on-item-click]}
     :search-view {:classname android.widget.SearchView
                   :inherits :view-group
                   :traits [:on-query-text]}

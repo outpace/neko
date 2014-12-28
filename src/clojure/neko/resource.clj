@@ -1,14 +1,3 @@
-; Copyright © 2011 Sattvik Software & Technology Resources, Ltd. Co.,
-; Alexander Yakushev. All rights reserved.
-;
-; This program and the accompanying materials are made available under the
-; terms of the Eclipse Public License v1.0 which accompanies this distribution,
-; and is available at <http://www.eclipse.org/legal/epl-v10.html>.
-;
-; By using this software in any fashion, you are agreeing to be bound by the
-; terms of this license.  You must not remove this notice, or any other, from
-; this software.
-
 (ns neko.resource
   "Provides utilities to resolve application resources."
   (:require [clojure.string :as string]
@@ -51,6 +40,7 @@
   If the name argument is an integer, it is assumed to be a valid resource ID
   and will be returned as is without any processing."
   ([res-type res-name]
+     (println "Two-argument version is deprecated. Please use (get-resource context res-type res-name)")
      (get-resource context/context res-type res-name))
   ([^Context context, res-type res-name]
      (let [resid (if (keyword? res-name)
@@ -64,16 +54,18 @@
 
 (defn get-id
   "Finds the ID for the XML item with the given name. This is simply a
-  convenient way of calling `(get-resource :id name)`."
+  convenient way of calling `(get-resource context :id name)`."
   ([res-name]
+     (println "One-argument version is deprecated. Please use (get-id context res-name)")
      (get-resource context/context :id res-name))
   ([^Context context, res-name]
      (get-resource context :id res-name)))
 
 (defn get-layout
   "Finds the resource ID for the layout with the given name. This is simply a
-  convenient way of calling `(get-resource :layout name)`."
+  convenient way of calling `(get-resource context :layout name)`."
   ([res-name]
+     (println "One-argument version is deprecated. Please use (get-layout context res-name)")
      (get-resource context/context :layout res-name))
   ([^Context context, res-name]
      (get-resource context :layout res-name)))
@@ -85,6 +77,7 @@
 
   If additional arguments are supplied, the string will be interpreted as a
   format and the arguments will be applied to the format."
+  {:forms '([context res-name & format-args?]) }
   [& args]
   (let [[^Context context args] (if (instance? Context (first args))
                                   [(first args) (rest args)]
@@ -97,14 +90,12 @@
           (.getString context id (to-array format-args))
           (.getString context id))))))
 
-(alter-meta! #'get-string
-             assoc :arglists '([res-name & format-args?] [context res-name & format-args?]))
-
 (defn get-drawable
   "Gets a Drawable object associated with the given ID or name from
   the context. The name will be resolved using get-resource. If
   res-name is a Drawable, returns it unchanged."
   ([res-name]
+     (println "One-argument version is deprecated. Please use (get-drawable context res-name)")
      (get-drawable context/context res-name))
   ([^Context context, res-name]
      (if (instance? Drawable res-name)
