@@ -8,7 +8,7 @@
   :java-source-paths ["src/java" "gen"]
 
   :profiles {:default [:user :dev :android-common]}
-  :plugins [[lein-droid "0.3.0-beta2"]]
+  :plugins [[lein-droid "0.3.0"]]
 
   :android {:library true
-            :target-version :ics})
+            :target-version :jelly-bean})
