@@ -1,6 +1,6 @@
 (ns neko.init
   "Contains functions for neko initialization and setting runtime options."
-  (:require [neko context resource compilation threading]
+  (:require [neko context resource compilation threading debug]
             [neko.tools.repl :refer [start-nrepl-server]])
   (:import android.content.Context))
 
@@ -34,6 +34,7 @@
   [context & {:keys [port] :as args}]
   (when-not @initialized?
     (alter-var-root #'neko.context/context (constantly context))
+    (.put neko.debug/all-activities :neko.context/context context)
     (alter-var-root #'neko.resource/package-name
                     (constantly (.getPackageName ^Context context)))
     (enable-dynamic-compilation context)

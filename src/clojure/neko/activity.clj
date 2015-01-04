@@ -3,11 +3,11 @@
   {:author "Daniel Solano Gómez"}
   (:require neko.init
             [neko.ui :refer [make-ui]]
+            [neko.debug :refer [all-activities]]
             [neko.-utils :refer :all])
   (:import android.app.Activity
            android.view.View
-           android.app.Fragment
-           java.util.WeakHashMap))
+           android.app.Fragment))
 
 (defn activity?
   "Determines whether the argument is an instance of Activity."
@@ -60,19 +60,8 @@
            (throw (IllegalArgumentException.
                    (format "‘%s’ is not a valid feature." feat)))))))
 
-(def ^WeakHashMap all-activities
-  "Weak hashmap that contains mapping of namespaces or
-  keywords to Activity objects."
-  (WeakHashMap.))
-
-(defmacro ^Activity *a
-  "If called without arguments, returns the activity for the current
-  namespace. A version with one argument will return the activity for
-  the given object (be it a namespace or any other object)."
-  ([]
-     `(get all-activities ~*ns*))
-  ([key]
-     `(get all-activities ~key)))
+(defmacro *a [& args]
+  `(neko.debug/*a ~@args))
 
 (defmacro defactivity
   "Creates an activity with the given full package-qualified name.
@@ -136,7 +125,7 @@ Use (*a) to get the current activity."))
              ~(when (and (not (:neko.init/release-build *compiler-options*))
                          def)
                 `(def ~(vary-meta def assoc :tag name) ~'this))
-             (.put all-activities ~*ns* ~'this)
+             (.put all-activities '~(.name *ns*) ~'this)
              ~(when key
                 `(.put all-activities ~key ~'this))
              (neko.init/init (.getApplicationContext ~'this))
