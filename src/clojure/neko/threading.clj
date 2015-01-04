@@ -20,31 +20,13 @@
            android.os.Looper
            android.os.Handler))
 
-;; ### Initialization
-
-(def ^{:doc "Contains the UI looper Handler object which is used to
-  post tasks to UI thread."
-       :private true}
-  ^Handler handler)
-
-(def ^{:doc "Stores UI thread object for quick reference."
-       :private true}
-  ^Thread ui-thread)
-
-(defn init-threading
-  "Initializes `handler` and `ui-thread` vars to be used in threading
-  facilities."
-  []
-  (let [^Looper ui-looper (Looper/getMainLooper)]
-    (alter-var-root #'handler (constantly (Handler. ui-looper)))
-    (alter-var-root #'ui-thread (constantly (.getThread ui-looper)))))
-
 ;; ### UI thread utilities
 
 (defn on-ui-thread?
   "Returns true if the current thread is a UI thread."
   []
-  (identical? (Thread/currentThread) ui-thread))
+  (identical? (Thread/currentThread)
+              (.getThread ^Looper (Looper/getMainLooper))))
 
 (defn on-ui*
   "Runs the given nullary function on the UI thread.  If this function is
@@ -52,7 +34,7 @@
   [f]
   (if (on-ui-thread?)
     (f)
-    (.post handler (fn [] (safe-for-ui (f))))))
+    (.post (Handler. (Looper/getMainLooper)) (fn [] (safe-for-ui (f))))))
 
 (defmacro on-ui
   "Runs the macro body on the UI thread.  If this macro is called on the UI

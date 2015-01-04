@@ -1,6 +1,6 @@
 (ns neko.init
   "Contains functions for neko initialization and setting runtime options."
-  (:require [neko context resource compilation threading debug]
+  (:require [neko context resource compilation debug]
             [neko.tools.repl :refer [start-nrepl-server]])
   (:import android.content.Context))
 
@@ -40,6 +40,5 @@
     (enable-dynamic-compilation context)
     ;; Ensure that `:port` is provided, pass all other arguments as-is.
     (start-nrepl-server port (mapcat identity (dissoc args :port)))
-    (neko.threading/init-threading)
     (enable-compliment-sources)
     (reset! initialized? true)))
