@@ -3,12 +3,12 @@
   :url "https://github.com/clojure-android/neko"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure-android/clojure "1.5.1-jb"]]
+  :dependencies [[org.clojure-android/clojure "1.7.0-alpha4"]]
   :source-paths ["src" "src/clojure"]
   :java-source-paths ["src/java" "gen"]
 
-  :profiles {:default [:user :dev :android-common]}
+  :profiles {:default [:android-common]}
   :plugins [[lein-droid "0.3.0"]]
 
   :android {:library true
-            :target-version :jelly-bean})
+            :target-version 18})
