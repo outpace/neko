@@ -1,14 +1,3 @@
-; Copyright © 2011 Sattvik Software & Technology Resources, Ltd. Co.
-; All rights reserved.
-;
-; This program and the accompanying materials are made available under the
-; terms of the Eclipse Public License v1.0 which accompanies this distribution,
-; and is available at <http://www.eclipse.org/legal/epl-v10.html>.
-;
-; By using this software in any fashion, you are agreeing to be bound by the
-; terms of this license.  You must not remove this notice, or any other, from
-; this software.
-
 (ns neko.activity
   "Utilities to aid in working with an activity."
   {:author "Daniel Solano Gómez"}
@@ -20,28 +9,10 @@
            android.app.Fragment
            java.util.WeakHashMap))
 
-(def
-  ^{:doc "The current activity to operate on."
-    :dynamic true}
-  *activity*)
-
-(defmacro with-activity
-  "Evaluates body such that *activity* is bound to the given activity."
-  [activity & body]
-  (println "WARNING: with-activity and any usage of *activity* is deprecated.")
-  `(binding [*activity* ~activity]
-     ~@body))
-
 (defn activity?
   "Determines whether the argument is an instance of Activity."
   [x]
   (instance? Activity x))
-
-(defn has-*activity*?
-  "Ensures that the calling context has a valid *activity* var."
-  []
-  (and (bound? #'*activity*)
-       (activity? *activity*)))
 
 (defn ^View get-decor-view
   "Returns the root view of the given activity."
@@ -54,57 +25,40 @@
   + neko.ui tree
   + A view object, which will be used directly
   + An integer presumed to be a valid layout ID."
-  ([view]
-   (set-content-view! *activity* view))
-  ([^Activity activity, view]
-   {:pre [(activity? activity)]}
-   (cond
-    (instance? View view)
-       (.setContentView activity ^View view)
-    (integer? view)
-       (.setContentView activity ^Integer view)
-    :else
-       (let [dv (get-decor-view activity)]
-         (.setTag dv (java.util.HashMap.))
-         (.setContentView activity
-                          ^View (neko.ui/make-ui-element activity view
-                                                         {:id-holder dv}))))))
+  [^Activity activity, view]
+  {:pre [(activity? activity)]}
+  (cond
+   (instance? View view)
+   (.setContentView activity ^View view)
+
+   (integer? view)
+   (.setContentView activity ^Integer view)
+
+   :else
+   (let [dv (get-decor-view activity)]
+     (.setTag dv (java.util.HashMap.))
+     (.setContentView activity
+                      ^View (neko.ui/make-ui-element activity view
+                                                     {:id-holder dv})))))
 
 (defn request-window-features!
-  "Requests the given features for the activity.  The features should be
-  keywords such as :no-title or :indeterminate-progress corresponding
-  FEATURE_NO_TITLE and FEATURE_INDETERMINATE_PROGRESS, respectively.  Returns a
-  sequence of boolean values corresponding to each feature, where a true value
-  indicates the requested feature is supported and now enabled.
-
-  If within a with-activity form, supplying an activity as the first argument
-  is not necessary.
+  "Requests the given features for the activity. The features should be keywords
+  such as :no-title or :indeterminate-progress corresponding FEATURE_NO_TITLE
+  and FEATURE_INDETERMINATE_PROGRESS, respectively. Returns a sequence of
+  boolean values corresponding to each feature, where a true value indicates the
+  requested feature is supported and now enabled.
 
   This function should be called before set-content-view!."
-  {:arglists '([& features] [activity & features])}
-  [activity & features]
-  {:pre  [(or (activity? activity)
-              (and (keyword? activity)
-                   (has-*activity*?)))
-          (every? keyword? features)]
-   :post [%
-          (every? (fn [x] (instance? Boolean x)) %)]}
-  (let [[^Activity activity features]
-          (if (instance? Activity activity)
-            [activity features]
-            [*activity* (cons activity features)])
-        keyword->int (fn [k]
-                       (static-field-value android.view.Window
-                                           k
-                                           #(str "FEATURE_" %)))
-        request-feature  (fn [k]
-                           (try
-                             (.requestWindowFeature activity (keyword->int k))
-                             (catch NoSuchFieldException _
-                               (throw (IllegalArgumentException.
-                                        (format "‘%s’ is not a valid feature."
-                                                k))))))]
-    (doall (map request-feature features))))
+  [^Activity activity & features]
+  {:pre  [(activity? activity)
+          (every? keyword? features)]}
+  (doseq [feat features]
+    (try (.requestWindowFeature activity
+                                (static-field-value android.view.Window feat
+                                                    #(str "FEATURE_" %)))
+         (catch NoSuchFieldException _
+           (throw (IllegalArgumentException.
+                   (format "‘%s’ is not a valid feature." feat)))))))
 
 (def ^WeakHashMap all-activities
   "Weak hashmap that contains mapping of namespaces or
