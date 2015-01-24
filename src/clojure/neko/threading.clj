@@ -42,7 +42,7 @@
   [& body]
   `(on-ui* (fn [] ~@body)))
 
-(defn post*
+(defn ^{:deprecated "3.1.0"} post*
   "Causes the function to be added to the message queue.  The function will
   execute on the UI thread.  Returns true if successfully placed in the message
   queue."
@@ -55,7 +55,7 @@
   [view & body]
   `(post* ~view (fn [] ~@body)))
 
-(defn post-delayed*
+(defn ^{:deprecated "3.1.0"} post-delayed*
   "Causes the function to be added to the message queue, to be run after the
   specified amount of time elapses.  The function will execute on the UI
   thread.  Returns true if successfully placed in the message
