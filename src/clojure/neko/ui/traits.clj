@@ -186,7 +186,7 @@ next-level elements."
     Keyword (.setImageDrawable wdg (neko.resource/get-drawable image))
     Uri (.setImageURI wdg image)
     ;; Otherwise assume `image` to be resource ID.
-    :else (.setImageResource wdg image)))
+    (.setImageResource wdg image)))
 
 ;; ### Layout parameters attributes
 
@@ -209,9 +209,14 @@ next-level elements."
   {:attributes [:layout-width :layout-height]
    :applies? (and (or layout-width layout-height) (nil? container-type))}
   [^View wdg, {:keys [layout-width layout-height]} {:keys [container-type]}]
-  (let [^int width  (kw/value :layout-params (or layout-width  :wrap))
-        ^int height (kw/value :layout-params (or layout-height :wrap))]
-   (.setLayoutParams wdg (ViewGroup$LayoutParams. width height))))
+  (let [^int width (->> (or layout-width :wrap)
+                        (kw/value :layout-params)
+                        (to-dimension (.getContext wdg)))
+        ^int height (->> (or layout-height :wrap)
+                         (kw/value :layout-params)
+                         (to-dimension (.getContext wdg)))
+        lp (RelativeLayout$LayoutParams. width height)]
+    (.setLayoutParams wdg (ViewGroup$LayoutParams. width height))))
 
 (deftrait :linear-layout-params
   "Takes `:layout-width`, `:layout-height`, `:layout-weight`,
@@ -274,8 +279,12 @@ next-level elements."
   [^View wdg, {:keys [layout-width layout-height
                       layout-align-with-parent-if-missing] :as attributes}
    {:keys [container-type]}]
-  (let [^int width  (kw/value :layout-params (or layout-width  :wrap))
-        ^int height (kw/value :layout-params (or layout-height :wrap))
+  (let [^int width (->> (or layout-width :wrap)
+                        (kw/value :layout-params)
+                        (to-dimension (.getContext wdg)))
+        ^int height (->> (or layout-height :wrap)
+                         (kw/value :layout-params)
+                         (to-dimension (.getContext wdg)))
         lp (RelativeLayout$LayoutParams. width height)]
     (when-not (nil? layout-align-with-parent-if-missing)
       (set! (. lp alignWithParent) layout-align-with-parent-if-missing))
@@ -294,8 +303,12 @@ next-level elements."
   [^View wdg, {:keys [layout-width layout-height layout-view-type]
                :as attributes}
    {:keys [container-type]}]
-  (let [^int width  (kw/value :layout-params (or layout-width  :wrap))
-        ^int height (kw/value :layout-params (or layout-height :wrap))]
+  (let [^int width (->> (or layout-width :wrap)
+                        (kw/value :layout-params)
+                        (to-dimension (.getContext wdg)))
+        ^int height (->> (or layout-height :wrap)
+                         (kw/value :layout-params)
+                         (to-dimension (.getContext wdg)))]
     (.setLayoutParams
      wdg (if layout-view-type
            (AbsListView$LayoutParams. width height layout-view-type)
