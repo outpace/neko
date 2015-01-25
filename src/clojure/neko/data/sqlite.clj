@@ -84,7 +84,7 @@
    (println "One-argument version is deprecated. Please use (create-helper context schema)")
    (create-helper context schema))
   ([^Context context, {:keys [name version tables] :as schema}]
-   (SQLiteHelper. (.getApplicationContext context) name version
+   (SQLiteHelper. (.getApplicationContext context) name version schema
                   (for [table (keys tables)]
                     (db-create-query schema table))
                   (for [^Keyword table (keys tables)]
@@ -96,19 +96,24 @@
 (deftype TaggedDatabase [^SQLiteDatabase db, schema])
 
 (defn get-database
-  "Returns SQLiteDatabase instance for the given schema. Access-mode can be
-  either `:read` or `:write`."
-  {:forms '([context schema access-mode])}
-  ([schema access-mode]
-   (println "Two-argument version is deprecated. Please use (get-database context schema access-mode)")
-   (get-database context schema mode))
-  ([context schema access-mode]
+  "Returns SQLiteDatabase instance for the given schema or helper. Access-mode
+  can be either `:read` or `:write`."
+  {:forms '([context schema-or-helper access-mode])}
+  ([helper access-mode]
    {:pre [(#{:read :write} access-mode)]}
-   (let [helper (create-helper context schema)]
+   (if (instance? SQLiteHelper schema-or-helper)
+     (do (println "Two-argument version is deprecated. Please use (get-database context schema access-mode)")
+         (get-database context helper mode))
      (TaggedDatabase. (case access-mode
                         :read (.getReadableDatabase helper)
                         :write (.getWritableDatabase helper))
-                      schema))))
+                      (.schema helper))
+     schema-or-helper
+     (create-helper context schema-or-helper))
+   (println "Two-argument version is deprecated. Please use (get-database context schema access-mode)")
+   (get-database context schema-or-helper mode))
+  ([context schema access-mode]
+   (get-database (create-helper context schema) access-mode)))
 
 ;; ### Data-SQL transformers
 

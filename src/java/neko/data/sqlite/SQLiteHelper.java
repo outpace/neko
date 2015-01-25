@@ -10,11 +10,13 @@ public class SQLiteHelper extends SQLiteOpenHelper {
 
     private final List<String> createQueriesList;
     private final List<String> dropTablesList;
+    public final Object schema;
 
-    public SQLiteHelper(Context context, String name, int version,
+    public SQLiteHelper(Context context, String name, int version, Object schema,
                         List<String> createQueriesList,
                         List<String> dropTablesList) {
         super(context, name, null, version);
+        this.schema = schema;
         this.createQueriesList = createQueriesList;
         this.dropTablesList = dropTablesList;
     }
