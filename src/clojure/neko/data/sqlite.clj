@@ -99,19 +99,16 @@
   "Returns SQLiteDatabase instance for the given schema or helper. Access-mode
   can be either `:read` or `:write`."
   {:forms '([context schema-or-helper access-mode])}
-  ([helper access-mode]
+  ([^SQLiteOpenHelper helper, access-mode]
    {:pre [(#{:read :write} access-mode)]}
-   (if (instance? SQLiteHelper schema-or-helper)
-     (do (println "Two-argument version is deprecated. Please use (get-database context schema access-mode)")
-         (get-database context helper mode))
+   (if (instance? SQLiteHelper helper)
      (TaggedDatabase. (case access-mode
                         :read (.getReadableDatabase helper)
                         :write (.getWritableDatabase helper))
                       (.schema helper))
-     schema-or-helper
-     (create-helper context schema-or-helper))
-   (println "Two-argument version is deprecated. Please use (get-database context schema access-mode)")
-   (get-database context schema-or-helper mode))
+     (do (println "Context-less version version is deprecated.
+Please use (get-database context schema access-mode) or (get-database helper access-mode)")
+         (get-database context helper access-mode))))
   ([context schema access-mode]
    (get-database (create-helper context schema) access-mode)))
 
@@ -146,6 +143,12 @@
     Double (.getDouble cur i)
     Byte (.getBlob cur i)))
 
+(defn- qualified-name
+  [^Keyword kw]
+  (.toString (if (.getNamespace (.sym kw))
+               (str (.getNamespace (.sym kw)) "." (.getName (.sym kw)))
+               (.getName (.sym kw)))))
+
 (defn- keyval-to-sql
   "Transforms a key-value pair into a proper SQL comparison/assignment
   statement.
@@ -155,17 +158,18 @@
   ...]`, in which case it will be transformed into `key = value1 OR
   key = value2 ...`. Nested vectors is supported."
   [k v]
-  (let [k (name k)]
+  (let [qk (qualified-name k)]
     (condp #(= % (type %2)) v
       PersistentVector (let [[op & values] v]
                          (->> values
                               (map (partial keyval-to-sql k))
                               (interpose (str " " (name op) " "))
                               string/join))
-      String (format "(%s = '%s')" k v)
-      Boolean (format "(%s = %s)" k (if v 1 0))
-      nil (format "(%s is NULL)" k)
-      (format "(%s = %s)" k v))))
+      String (format "(%s = '%s')" qk v)
+      Boolean (format "(%s = %s)" qk (if v 1 0))
+      Keyword (format "(%s = %s)" qk (qualified-name v))
+      nil (format "(%s is NULL)" qk)
+      (format "(%s = %s)" qk v))))
 
 ;; ### SQL operations
 
@@ -180,43 +184,75 @@
          (interpose " AND ")
          string/join)))
 
+(defn construct-sql-query [select from where]
+  (str "select " (string/join (interpose ", " (map qualified-name select)))
+       " from " (cond (string? from) from
+
+                      (sequential? from)
+                      (string/join (interpose ", " (map name from)))
+
+                      :else (name from))
+       (let [wc (where-clause where)]
+         (if-not (empty? wc)
+           (str " where " wc) ""))))
+
 (defn query
   "Executes SELECT statement against the database and returns a Cursor
   object with the results. `where` argument should be a map of column
   keywords to values."
-  [^TaggedDatabase tagged-db table-name where]
-  (let [columns (->> (get-in (.schema tagged-db) [:tables table-name :columns])
-                     keys
-                     (map name)
-                     into-array)]
-    (.query (.db tagged-db) (name table-name) columns
-            (where-clause where) nil nil nil nil)))
+  ([^TaggedDatabase tagged-db, from where]
+   {:pre [(keyword? from)]}
+   (let [columns (->> (get-in (.schema tagged-db) [:tables from :columns])
+                      keys)]
+     (query tagged-db columns from where)))
+  ([^TaggedDatabase tagged-db columns from where]
+   (.rawQuery (.db tagged-db) (construct-sql-query columns from where) nil)))
+
 (def db-query query)
 
 (defn seq-cursor
   "Turns data from Cursor object into a lazy sequence. Takes database
   argument in order to get schema from it."
-  [^TaggedDatabase tagged-db, table-name, ^Cursor cursor]
-  (.moveToFirst cursor)
-  (let [columns (get-in (.schema tagged-db) [:tables table-name :columns])
-        seq-fn (fn seq-fn []
-                 (lazy-seq
-                  (if (.isAfterLast cursor)
-                    (.close cursor)
-                    (let [v (reduce-kv
-                             (fn [data i [column-name {type :type}]]
-                               (assoc data column-name
-                                      (get-value-from-cursor cursor i type)))
-                             {} (vec columns))]
-                      (.moveToNext cursor)
-                      (cons v (seq-fn))))))]
-    (seq-fn)))
+  ([^TaggedDatabase tagged-db, table-name cursor]
+   (seq-cursor tagged-db (-> (.schema tagged-db) :tables
+                             (get table-name) :columns keys)
+               table-name cursor))
+  ([^TaggedDatabase tagged-db, column-names, from, ^Cursor cursor]
+   (.moveToFirst cursor)
+   (let [tables (:tables (.schema tagged-db))
+         columns (if (keyword? from)
+                   (let [table-cls (:columns (get tables from))]
+                     (mapv (fn [cl-name]
+                             [cl-name (:type (get table-cls cl-name))])
+                           column-names))
+                   (mapv (fn [^Keyword kw]
+                           (let [cl-name (keyword (.getName kw))
+                                 cl (-> (get tables (keyword (.getNamespace kw)))
+                                        :columns
+                                        (get cl-name))]
+                             [kw (:type cl)]))
+                         column-names))
+         seq-fn (fn seq-fn []
+                  (lazy-seq
+                   (if (.isAfterLast cursor)
+                     (.close cursor)
+                     (let [v (reduce-kv
+                              (fn [data i [column-name type]]
+                                (assoc data column-name
+                                       (get-value-from-cursor cursor i type)))
+                              {} columns)]
+                       (.moveToNext cursor)
+                       (cons v (seq-fn))))))]
+     (seq-fn))))
 
 (defn query-seq
   "Executes a SELECT statement against the database and returns the
   result in a sequence. Same as calling `seq-cursor` on `query` output."
-  [^TaggedDatabase tagged-db table-name where]
-  (seq-cursor tagged-db table-name (db-query tagged-db table-name where)))
+  ([^TaggedDatabase tagged-db table-name where]
+   (seq-cursor tagged-db table-name (query tagged-db table-name where)))
+  ([^TaggedDatabase tagged-db columns from where]
+   (seq-cursor tagged-db columns from
+               (query tagged-db columns from where))))
 (def db-query-seq query-seq)
 
 (defn query-scalar
@@ -236,7 +272,7 @@
                       (name table-name)
                       (if (seq where-cl)
                         (str "where " where-cl) ""))]
-    (with-open [cursor (.rawQuery (.db tagged-db) query nil)]
+    (with-open [^Cursor cursor (.rawQuery (.db tagged-db) query nil)]
       (try (.moveToFirst cursor)
            (get-value-from-cursor cursor 0 type)
            (catch CursorIndexOutOfBoundsException e nil)))))
