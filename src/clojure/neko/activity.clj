@@ -1,18 +1,12 @@
 (ns neko.activity
   "Utilities to aid in working with an activity."
-  {:author "Daniel Solano Gómez"}
   (:require neko.init
             [neko.ui :refer [make-ui]]
             [neko.debug :refer [all-activities]]
-            [neko.-utils :refer :all])
+            [neko.-utils :refer [keyword->static-field]])
   (:import android.app.Activity
-           android.view.View
+           [android.view View Window]
            android.app.Fragment))
-
-(defn activity?
-  "Determines whether the argument is an instance of Activity."
-  [x]
-  (instance? Activity x))
 
 (defn ^View get-decor-view
   "Returns the root view of the given activity."
@@ -26,7 +20,7 @@
   + A view object, which will be used directly
   + An integer presumed to be a valid layout ID."
   [^Activity activity, view]
-  {:pre [(activity? activity)]}
+  {:pre [(instance? Activity activity)]}
   (cond
    (instance? View view)
    (.setContentView activity ^View view)
@@ -41,24 +35,20 @@
                       ^View (neko.ui/make-ui-element activity view
                                                      {:id-holder dv})))))
 
-(defn request-window-features!
+(defmacro request-window-features!
   "Requests the given features for the activity. The features should be keywords
   such as :no-title or :indeterminate-progress corresponding FEATURE_NO_TITLE
   and FEATURE_INDETERMINATE_PROGRESS, respectively. Returns a sequence of
-  boolean values corresponding to each feature, where a true value indicates the
-  requested feature is supported and now enabled.
+  booleans whether for each feature that indicates if the feature is supported
+  and now enabled.
 
-  This function should be called before set-content-view!."
+  This macro should be called before set-content-view!."
   [^Activity activity & features]
-  {:pre  [(activity? activity)
-          (every? keyword? features)]}
-  (doseq [feat features]
-    (try (.requestWindowFeature activity
-                                (static-field-value android.view.Window feat
-                                                    #(str "FEATURE_" %)))
-         (catch NoSuchFieldException _
-           (throw (IllegalArgumentException.
-                   (format "‘%s’ is not a valid feature." feat)))))))
+  {:pre [(every? keyword? features)]}
+  `[~@(for [feat features]
+        `(.requestWindowFeature
+          ~activity ~(symbol (str (.getName Window) "/FEATURE_"
+                                  (keyword->static-field (name feat))))))])
 
 (defmacro *a [& args]
   `(neko.debug/*a ~@args))
@@ -71,8 +61,8 @@
 
   :extends, :prefix - same as for `gen-class`.
 
-  :def - symbol to bind the Activity object to in the onCreate
-  method. Relevant only if :create is used.
+  :features - window features to be requested for the activity.
+  Relevant only if :create is used.
 
   :on-create - takes a two-argument function. Generates a handler for
   activity's `onCreate` event which automatically calls the
@@ -85,11 +75,12 @@
   - same as :on-create but require a one-argument function."
   [name & {:keys [extends prefix on-create on-create-options-menu
                   on-options-item-selected on-activity-result
-                  on-new-intent def state key]
+                  on-new-intent def state key features]
            :as options}]
   (let [options (or options {}) ;; Handle no-options case
         sname (simple-name name)
-        prefix (or prefix (str sname "-"))]
+        prefix (or prefix (str sname "-"))
+        state (or state `(atom {}))]
     (when def
       (println "WARNING: :def attribute in defactivity is deprecated.
 Use (*a) to get the current activity."))
@@ -129,6 +120,8 @@ Use (*a) to get the current activity."))
              ~(when key
                 `(.put all-activities ~key ~'this))
              (neko.init/init (.getApplicationContext ~'this))
+             ~(when features
+                `(request-window-features! ~'this ~@features))
              (~on-create ~'this ~'savedInstanceState)))
        ~(when on-create-options-menu
           `(defn ~(symbol (str prefix "onCreateOptionsMenu"))
