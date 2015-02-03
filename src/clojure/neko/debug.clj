@@ -2,6 +2,7 @@
   "Contains useful tools to be used while developing the application."
   (:require [neko log notify])
   (:import android.app.Activity
+           android.view.WindowManager$LayoutParams
            java.util.WeakHashMap))
 
 ;;; Simplify REPL access to Activity objects.
@@ -54,5 +55,14 @@
   without executing."
   [f]
   (fn [] (safe-for-ui (f))))
+
+(defmacro keep-screen-on
+  "A conditional macro that will enforce the screen to stay on while the
+  application is run in the debug mode."
+  [^Activity activity]
+  (if (:neko.init/release-build *compiler-options*)
+    nil
+    `(.addFlags (.getWindow ~activity)
+                WindowManager$LayoutParams/FLAG_KEEP_SCREEN_ON)))
 
 
