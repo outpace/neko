@@ -6,9 +6,9 @@
   (:refer-clojure :exclude [update])
   (:require [clojure.string :as string])
   (:use [neko.context :only [context]])
-  (:import [android.database.sqlite SQLiteDatabase SQLiteOpenHelper]
-           neko.data.sqlite.SQLiteHelper
-           [android.database Cursor CursorIndexOutOfBoundsException SQLException]
+  (:import [android.database.sqlite SQLiteDatabase]
+           [neko.data.sqlite SQLiteHelper TaggedCursor]
+           android.database.Cursor
            [android.content ContentValues Context]
            [clojure.lang Keyword PersistentVector]))
 
@@ -74,7 +74,7 @@
        string/join
        (format "create table %s (%s);" (name table-name))))
 
-(defn ^SQLiteOpenHelper create-helper
+(defn ^SQLiteHelper create-helper
   "Creates a SQLiteOpenHelper instance for a given schema.
 
   Helper will recreate database if the current schema version and
@@ -99,7 +99,7 @@
   "Returns SQLiteDatabase instance for the given schema or helper. Access-mode
   can be either `:read` or `:write`."
   {:forms '([context schema-or-helper access-mode])}
-  ([^SQLiteOpenHelper helper, access-mode]
+  ([^SQLiteHelper helper, access-mode]
    {:pre [(#{:read :write} access-mode)]}
    (if (instance? SQLiteHelper helper)
      (TaggedDatabase. (case access-mode
@@ -197,38 +197,15 @@ Please use (get-database context schema access-mode) or (get-database helper acc
            (str " where " wc) ""))))
 
 (defn query
-  "Executes SELECT statement against the database and returns a Cursor
-  object with the results. `where` argument should be a map of column
-  keywords to values."
+  "Executes SELECT statement against the database and returns a TaggedCursor
+  object with the results. `where` argument should be a map of column keywords
+  to values."
   ([^TaggedDatabase tagged-db, from where]
    {:pre [(keyword? from)]}
    (let [columns (->> (get-in (.schema tagged-db) [:tables from :columns])
                       keys)]
      (query tagged-db columns from where)))
-  ([^TaggedDatabase tagged-db columns from where]
-   (.rawQuery (.db tagged-db) (construct-sql-query columns from where) nil)))
-
-(def db-query query)
-
-(defn entity-from-cursor
-  "Reads a single row from Cursor object. Columns should be a vector of pairs
-  where first value is column name and the second is its type."
-  [cursor columns]
-  (reduce-kv
-   (fn [data i [column-name type]]
-     (assoc data column-name
-            (get-value-from-cursor cursor i type)))
-   {} columns))
-
-(defn seq-cursor
-  "Turns data from Cursor object into a lazy sequence. Takes database
-  argument in order to get schema from it."
-  ([^TaggedDatabase tagged-db, table-name cursor]
-   (seq-cursor tagged-db (-> (.schema tagged-db) :tables
-                             (get table-name) :columns keys)
-               table-name cursor))
-  ([^TaggedDatabase tagged-db, column-names, from, ^Cursor cursor]
-   (.moveToFirst cursor)
+  ([^TaggedDatabase tagged-db, column-names from where]
    (let [tables (:tables (.schema tagged-db))
          columns (if (keyword? from)
                    (let [table-cls (:columns (get tables from))]
@@ -241,24 +218,40 @@ Please use (get-database context schema access-mode) or (get-database helper acc
                                         :columns
                                         (get cl-name))]
                              [kw (:type cl)]))
-                         column-names))
-         seq-fn (fn seq-fn []
-                  (lazy-seq
-                   (if (.isAfterLast cursor)
-                     (.close cursor)
-                     (let [v (entity-from-cursor cursor columns)]
-                       (.moveToNext cursor)
-                       (cons v (seq-fn))))))]
-     (seq-fn))))
+                         column-names))]
+     (TaggedCursor. (.rawQuery (.db tagged-db)
+                               (construct-sql-query column-names from where) nil)
+                    columns))))
+(def db-query query)
+
+(defn entity-from-cursor
+  "Reads a single (current) row from TaggedCursor object."
+  [^TaggedCursor cursor]
+  (reduce-kv
+   (fn [data i [column-name type]]
+     (assoc data column-name
+            (get-value-from-cursor cursor i type)))
+   {} (vec (.columns cursor))))
+
+(defn seq-cursor
+  "Turns data from TaggedCursor object into a lazy sequence."
+  [^TaggedCursor cursor]
+  (.moveToFirst cursor)
+  (let [seq-fn (fn seq-fn []
+                 (lazy-seq
+                  (if (.isAfterLast cursor)
+                    (.close cursor)
+                    (let [v (entity-from-cursor cursor)]
+                      (.moveToNext cursor)
+                      (cons v (seq-fn))))))]
+    (seq-fn)))
 
 (defn query-seq
   "Executes a SELECT statement against the database and returns the
   result in a sequence. Same as calling `seq-cursor` on `query` output."
-  ([^TaggedDatabase tagged-db table-name where]
-   (seq-cursor tagged-db table-name (query tagged-db table-name where)))
-  ([^TaggedDatabase tagged-db columns from where]
-   (seq-cursor tagged-db columns from
-               (query tagged-db columns from where))))
+  {:forms '([tagged-db table-name where] [tagged-db columns from where])}
+  [& args]
+  (seq-cursor (apply query args)))
 (def db-query-seq query-seq)
 
 (defn query-scalar
