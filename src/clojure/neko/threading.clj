@@ -28,19 +28,18 @@
   (identical? (Thread/currentThread)
               (.getThread ^Looper (Looper/getMainLooper))))
 
-(defn on-ui*
-  "Runs the given nullary function on the UI thread.  If this function is
-  called on the UI thread, it will evaluate immediately."
-  [f]
-  (if (on-ui-thread?)
-    (f)
-    (.post (Handler. (Looper/getMainLooper)) (fn [] (safe-for-ui (f))))))
-
 (defmacro on-ui
   "Runs the macro body on the UI thread.  If this macro is called on the UI
   thread, it will evaluate immediately."
   [& body]
-  `(on-ui* (fn [] ~@body)))
+  `(if (on-ui-thread?)
+     (safe-for-ui ~@body)
+     (.post (Handler. (Looper/getMainLooper)) (fn [] (safe-for-ui ~@body)))))
+
+(defn on-ui*
+  "Functional version of `on-ui`, runs the nullary function on the UI thread."
+  [f]
+  (on-ui (f)))
 
 (defn ^{:deprecated "3.1.0"} post*
   "Causes the function to be added to the message queue.  The function will
