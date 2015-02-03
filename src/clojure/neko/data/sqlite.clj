@@ -210,6 +210,16 @@ Please use (get-database context schema access-mode) or (get-database helper acc
 
 (def db-query query)
 
+(defn entity-from-cursor
+  "Reads a single row from Cursor object. Columns should be a vector of pairs
+  where first value is column name and the second is its type."
+  [cursor columns]
+  (reduce-kv
+   (fn [data i [column-name type]]
+     (assoc data column-name
+            (get-value-from-cursor cursor i type)))
+   {} columns))
+
 (defn seq-cursor
   "Turns data from Cursor object into a lazy sequence. Takes database
   argument in order to get schema from it."
@@ -236,11 +246,7 @@ Please use (get-database context schema access-mode) or (get-database helper acc
                   (lazy-seq
                    (if (.isAfterLast cursor)
                      (.close cursor)
-                     (let [v (reduce-kv
-                              (fn [data i [column-name type]]
-                                (assoc data column-name
-                                       (get-value-from-cursor cursor i type)))
-                              {} columns)]
+                     (let [v (entity-from-cursor cursor columns)]
                        (.moveToNext cursor)
                        (cons v (seq-fn))))))]
      (seq-fn))))
@@ -259,7 +265,7 @@ Please use (get-database context schema access-mode) or (get-database helper acc
   "Executes a SELECT statement against the database on a column and returns a
   scalar value. `column` can be either a keyword or string-keyword pair where
   string denotes the aggregation function."
-  [^TaggedDatabase tagged-db table-name column where]
+  [^TaggedDatabase tagged-db column table-name where]
   (let [[aggregator column] (if (vector? column)
                               column [nil column])
         type (get-in (.schema tagged-db)
