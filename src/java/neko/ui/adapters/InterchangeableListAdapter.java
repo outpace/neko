@@ -18,9 +18,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import clojure.lang.IFn;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.ArrayList;
 
 public class InterchangeableListAdapter extends BaseAdapter {
 
@@ -36,37 +33,26 @@ public class InterchangeableListAdapter extends BaseAdapter {
         this.data = initialData;
     }
 
-    public InterchangeableListAdapter(IFn createViewFn, IFn updateViewFn,
-                                      Map initialData) {
-        this(createViewFn, updateViewFn, new ArrayList(initialData.entrySet()));
-    }
-
-    public InterchangeableListAdapter(IFn createViewFn, IFn updateViewFn,
-                                      Set initialData) {
-        this(createViewFn, updateViewFn, new ArrayList(initialData));
-    }
-
-    @Override
     public int getCount() {
         return data.size();
     }
-    @Override
+
     public Object getItem(int position) {
         return data.get(position);
     }
-    @Override
+
     public long getItemId(int position) {
         return position;
     }
-    @Override
+
     public boolean hasStableIds() {
         return false;
     }
-    @Override
+
     public boolean isEmpty() {
         return data.isEmpty();
     }
-    @Override
+
     public View getView(int position, View convertView, ViewGroup parent) {
         View view = convertView;
         if (view == null) {
@@ -77,15 +63,8 @@ public class InterchangeableListAdapter extends BaseAdapter {
     }
 
     public void setData(List newData) {
-        this.data = newData;
+        data = newData;
         notifyDataSetInvalidated();
     }
 
-    public void setData(Set newData) {
-      setData(new ArrayList(newData));
-    }
-
-    public void setData(Map newData) {
-      setData(new ArrayList(newData.entrySet()));
-    }
 }
