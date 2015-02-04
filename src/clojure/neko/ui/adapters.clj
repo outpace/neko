@@ -1,10 +1,11 @@
 (ns neko.ui.adapters
   "Contains custom adapters for ListView and Spinner."
   (:require [neko.debug :refer [safe-for-ui]]
+            [neko.data.sqlite :refer [entity-from-cursor]]
             [neko.threading :refer [on-ui]]
             [neko.ui :refer [make-ui-element]])
   (:import android.view.View
-           neko.ui.adapters.InterchangeableListAdapter))
+           [neko.ui.adapters InterchangeableListAdapter TaggedCursorAdapter]))
 
 (defn ref-adapter
   "Takes a function that creates a View, a function that updates a
@@ -41,3 +42,28 @@
                 (fn [_ __ ___ new-state]
                   (on-ui (.setData adapter (access-fn new-state)))))
      adapter)))
+
+(defn cursor-adapter
+  "Takes a context, TaggedCursor instance, a function that creates a View, and a
+  function that updates a view according to the element. Returns an Adapter
+  object that displays cursor contents.
+
+  `create-view-fn` is a function of Context, that returns a UI tree or a View.
+  `update-view-fn` is a function of three arguments: view to update, cursor, and
+  data extracted from the cursor."
+  [context cursor create-view-fn update-view-fn]
+  {:pre [(fn? create-view-fn) (fn? update-view-fn)]}
+  (let [create-fn (fn [context]
+                    (or (safe-for-ui
+                         (let [view (create-view-fn context)]
+                           (if (instance? View view)
+                             view
+                             (make-ui-element
+                              context view
+                              {:container-type :abs-listview-layout}))))
+                        (android.view.View. context)))]
+    (TaggedCursorAdapter.
+     context cursor create-fn
+     (fn [view cursor data]
+       (safe-for-ui (update-view-fn view cursor data)))
+     entity-from-cursor)))

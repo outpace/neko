@@ -8,7 +8,7 @@
   (:use [neko.context :only [context]])
   (:import [android.database.sqlite SQLiteDatabase]
            [neko.data.sqlite SQLiteHelper TaggedCursor]
-           android.database.Cursor
+           [android.database Cursor CursorIndexOutOfBoundsException]
            [android.content ContentValues Context]
            [clojure.lang Keyword PersistentVector]))
 
