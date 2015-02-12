@@ -4,9 +4,18 @@
             [neko.context :as context])
   (:import android.content.Context android.graphics.drawable.Drawable))
 
-;; ## Runtime resource resolution
-
 (def package-name (:neko.init/package-name *compiler-options*))
+
+(defmacro import-all
+  "Imports all existing application's R subclasses (R$drawable, R$string etc.)
+  into the current namespace."
+  []
+  `(do ~@(for [res-type '[anim drawable color layout menu
+                          string array plurals style id]]
+           `(try (import '~(symbol (str package-name ".R$" res-type)))
+                 (catch ClassNotFoundException _# nil)))))
+
+;; ## Runtime resource resolution
 
 (defn- kw-to-res-name
   "Takes the name of the keyword and turns all hyphens and periods to
@@ -83,7 +92,7 @@
                                   [(first args) (rest args)]
                                   [context/context args])
         [res-name & format-args] args]
-    (if (string? res-name)
+    (if-not (or (keyword? res-name) (number? res-name))
       res-name
       (when-let [id (get-resource context :string res-name)]
         (if format-args

@@ -15,9 +15,7 @@
 (defn enable-compliment-sources
   "Initializes compliment sources if theirs namespaces are present."
   []
-  (try (require 'neko.compliment.android-resources)
-       ((resolve 'neko.compliment.android-resources/init-source))
-       (require 'neko.compliment.ui-widgets-and-attributes)
+  (try (require 'neko.compliment.ui-widgets-and-attributes)
        ((resolve 'neko.compliment.ui-widgets-and-attributes/init-source))
        (catch Exception ex nil)))
 
@@ -36,7 +34,10 @@
     (alter-var-root #'neko.context/context (constantly context))
     (.put neko.debug/all-activities :neko.context/context context)
     (alter-var-root #'neko.resource/package-name
-                    (constantly (.getPackageName ^Context context)))
+                    (constantly
+                     (let [^String pkg (.getPackageName ^Context context)]
+                       (if (.endsWith pkg ".debug")
+                         (subs pkg 0 (- (.length pkg) 6)) pkg))))
     (enable-dynamic-compilation context)
     ;; Ensure that `:port` is provided, pass all other arguments as-is.
     (start-nrepl-server port (mapcat identity (dissoc args :port)))
