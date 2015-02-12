@@ -219,7 +219,7 @@ Please use (get-database context schema access-mode) or (get-database helper acc
                                         (get cl-name))]
                              [kw (:type cl)]))
                          column-names))]
-     (TaggedCursor. (.rawQuery (.db tagged-db)
+     (TaggedCursor. (.rawQuery ^SQLiteDatabase (.db tagged-db)
                                (construct-sql-query column-names from where) nil)
                     columns))))
 (def db-query query)
@@ -271,8 +271,8 @@ Please use (get-database context schema access-mode) or (get-database helper acc
                       (name table-name)
                       (if (seq where-cl)
                         (str "where " where-cl) ""))]
-    (with-open [^Cursor cursor (.rawQuery (.db tagged-db) query nil)]
-      (try (.moveToFirst cursor)
+    (with-open [cursor (.rawQuery ^SQLiteDatabase (.db tagged-db) query nil)]
+      (try (.moveToFirst ^Cursor cursor)
            (get-value-from-cursor cursor 0 type)
            (catch CursorIndexOutOfBoundsException e nil)))))
 
@@ -280,7 +280,7 @@ Please use (get-database context schema access-mode) or (get-database helper acc
   "Executes UPDATE query against the database generated from set and
   where clauses given as maps where keys are column keywords."
   [^TaggedDatabase tagged-db table-name set where]
-  (.update (.db tagged-db) (name table-name)
+  (.update ^SQLiteDatabase (.db tagged-db) (name table-name)
            (map-to-content tagged-db table-name set)
            (where-clause where) nil))
 (def db-update update)
@@ -289,7 +289,7 @@ Please use (get-database context schema access-mode) or (get-database helper acc
   "Executes INSERT query against the database generated from data-map
   where keys are column keywords."
   [^TaggedDatabase tagged-db table-name data-map]
-  (.insert (.db tagged-db) (name table-name) nil
+  (.insert ^SQLiteDatabase (.db tagged-db) (name table-name) nil
            (map-to-content tagged-db table-name data-map)))
 (def db-insert insert)
 
@@ -297,7 +297,10 @@ Please use (get-database context schema access-mode) or (get-database helper acc
   "Wraps the code in beginTransaction-endTransaction calls for batch query
   execution."
   [db & body]
-  `(try (.beginTransaction (.db ~db))
-        ~@body
-        (.setTransactionSuccessful (.db ~db))
-        (finally (.endTransaction (.db ~db)))))
+  (let [db-sym (with-meta (gensym "db")
+                 {:tag "android.database.sqlite.SQLiteDatabase"})]
+    `(let [~db-sym (.db ~(with-meta db {:tag "neko.data.sqlite.TaggedDatabase"}))]
+       (try (.beginTransaction ~db-sym)
+            ~@body
+            (.setTransactionSuccessful ~db-sym)
+            (finally (.endTransaction ~db-sym))))))

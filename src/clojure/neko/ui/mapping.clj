@@ -5,7 +5,7 @@
   (:require [clojure.string :as string])
   (:use [neko.-utils :only [keyword->static-field reflect-field]])
   (:import [android.widget LinearLayout Button EditText ListView SearchView
-            ImageView ImageView$ScaleType RelativeLayout]
+            ImageView ImageView$ScaleType RelativeLayout ScrollView]
            android.app.ProgressDialog
            [android.view View ViewGroup$LayoutParams Gravity]))
 
@@ -52,6 +52,8 @@
                  {:scale-type android.widget.ImageView$ScaleType}}
     :web-view {:classname android.webkit.WebView
                :inherits :view}
+    :scroll-view {:classname android.widget.ScrollView
+                  :inherits :view}
 
     ;; Other
     :layout-params {:classname ViewGroup$LayoutParams
@@ -77,6 +79,7 @@
     android.widget.EditText :edit-text
     android.widget.TextView :text-view
     android.widget.ListView :list-view
+    android.widget.ImageView :image-view
     android.app.ProgressDialog :progress-dialog}))
 
 (defn set-classname!

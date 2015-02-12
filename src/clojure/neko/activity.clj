@@ -3,7 +3,7 @@
   (:require neko.init
             [neko.ui :refer [make-ui]]
             [neko.debug :refer [all-activities]]
-            [neko.-utils :refer [keyword->static-field]])
+            [neko.-utils :as u])
   (:import android.app.Activity
            [android.view View Window]
            android.app.Fragment))
@@ -48,7 +48,7 @@
   `[~@(for [feat features]
         `(.requestWindowFeature
           ~activity ~(symbol (str (.getName Window) "/FEATURE_"
-                                  (keyword->static-field (name feat))))))])
+                                  (u/keyword->static-field (name feat))))))])
 
 (defmacro *a [& args]
   `(neko.debug/*a ~@args))
@@ -78,7 +78,7 @@
                   on-new-intent def state key features]
            :as options}]
   (let [options (or options {}) ;; Handle no-options case
-        sname (simple-name name)
+        sname (u/simple-name name)
         prefix (or prefix (str sname "-"))
         state (or state `(atom {}))]
     (when def
@@ -151,11 +151,11 @@ Use (*a) to get the current activity."))
              (.superOnNewIntent ~'this ~'intent)
              (~on-new-intent ~'this ~'intent)))
        ~@(map #(let [func (options %)
-                     event-name (keyword->camelcase %)]
+                     event-name (u/keyword->camelcase %)]
                  (when func
                    `(defn ~(symbol (str prefix event-name))
                       [~(vary-meta 'this assoc :tag name)]
-                      (~(symbol (str ".super" (capitalize event-name))) ~'this)
+                      (~(symbol (str ".super" (u/capitalize event-name))) ~'this)
                       (~func ~'this))))
               [:on-start :on-restart :on-resume
                :on-pause :on-stop :on-destroy]))))

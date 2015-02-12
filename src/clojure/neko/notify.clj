@@ -7,11 +7,6 @@
 
 ;; ### Toasts
 
-(def ^{:doc "Stores constants that represent toast's visible timespan."
-       :private true}
-  toast-length {:short Toast/LENGTH_SHORT
-                :long Toast/LENGTH_LONG})
-
 (defn toast
   "Creates a Toast object using a text message and a keyword representing how
   long a toast should be visible (`:short` or `:long`). Two-argument version
@@ -26,9 +21,11 @@
        (do (println "Context-less version is deprecated. Please use (toast context message length)")
            (toast context arg1 arg2))))
   ([^Context context, ^String message, length]
-     {:pre [(contains? toast-length length)]}
-     (.show
-      ^Toast (Toast/makeText context message ^int (toast-length length)))))
+   {:pre [(or (= length :short) (= length :long))]}
+   (.show
+    ^Toast (Toast/makeText context message ^int (case length
+                                                  :short Toast/LENGTH_SHORT
+                                                  :long Toast/LENGTH_LONG)))))
 
 ;; ### Notifications
 
