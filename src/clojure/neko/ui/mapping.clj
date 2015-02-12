@@ -175,7 +175,7 @@
   optional arguments.
 
   Optional arguments
-  - :classname, :inherits, :traits, :values, :attributes. "
+  - :classname, :inherits, :traits, :values, :attributes, :container-type."
   [kw-name & {:as args}]
   (swap! keyword-mapping assoc kw-name
          (if-not (contains? args :inherits)

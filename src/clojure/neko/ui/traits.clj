@@ -336,7 +336,9 @@ next-level elements."
   use the container type to choose the correct LayoutParams instance."
   {:applies? (constantly true)}
   [wdg _ __]
-  {:options-fn #(assoc % :container-type (kw/keyword-by-classname (type wdg)))})
+  (let [kw (kw/keyword-by-classname (type wdg))
+        container-type (-> (kw/get-keyword-mapping) kw :container-type)]
+    {:options-fn #(assoc % :container-type (or container-type kw))}))
 
 ;; ### Listener traits
 
