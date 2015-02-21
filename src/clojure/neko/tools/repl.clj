@@ -82,5 +82,7 @@
                         (or (:neko.init/nrepl-middleware *compiler-options*)
                             cider-middleware)))]
       `(let [port# (or ~port ~build-port 9999)]
-         (apply start-repl ~mware :port port# ~other-args)
-         (neko.log/i "Nrepl started at port" port#)))))
+         (try (apply start-repl ~mware :port port# ~other-args)
+              (neko.log/i "Nrepl started at port" port#)
+              (catch Exception ex#
+                (neko.log/e "Failed to start nREPL" :exception ex#)))))))
